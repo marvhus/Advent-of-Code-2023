@@ -29,28 +29,27 @@ part_2 :: (input: string) {
     }
 
     total : u64;
-    for split(content, "\n") { // might work on Windows (CRLF), but idk
-        if it.count == 0 continue; // ignore blank lines
-        line := it;
+    for line: split(content, "\n") { // might work on Windows (CRLF), but idk
+        if line.count == 0 continue; // ignore blank lines
         first: u8;
         last: u8;
-        while line.count > 0 { // we doing some fancy shit here
-            chr := line[0];
+        for 0..line.count-1 { // we doing some fancy shit here
+            chr := line[it];
             // is normal digit
             if chr >= #char "0" && chr <= #char "9" {
                 num := chr - #char "0";
                 if first == 0 then first = num;
                 last = num;
             } else {
-                num := check_for_number_word(line);
+                offset_line: string = ---;
+                offset_line.data = line.data + it;
+                offset_line.count = line.count - it;
+                num := check_for_number_word(offset_line);
                 if num != 0 {
                     if first == 0 then first = num;
                     last = num;
                 }
             }
-
-            line.count -= 1;
-            line.data += 1;
         }
         first *= 10;
         total += first + last;
