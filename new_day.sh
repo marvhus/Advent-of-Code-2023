@@ -41,3 +41,4 @@ set -xe
 
 mkdir "${day}"
 touch "${day}/main.jai"
+touch "${day}/test.txt"
