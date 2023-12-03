@@ -17,11 +17,11 @@ fi
 
 set -xe
 
-jai $path -quiet
+jai $path -quiet -import_dir ../modules
 
 { set +x; } &> /dev/null
 
-if [[ "$2" -eq "run" ]]; then
+if [[ "$2" == "run" ]]; then
     echo "=== RUNNING ==="
     $dir/main
 fi

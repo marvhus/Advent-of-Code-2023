@@ -36,7 +36,7 @@ part_1 :: (path: string) {
 
     // parse out the numbers
 
-    lines := split(content, "\n"); // maybe handle Windows newlines (CRLF)
+    lines := split_newlines(content);
     for lines {
         if it.count == 0 continue;
         line := it;
@@ -204,3 +204,4 @@ part_2 :: (path: string) {
 #import "Basic";
 #import "File";
 #import "String";
+#import "AoC_Utils";
