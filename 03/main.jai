@@ -1,9 +1,12 @@
 main :: () {
 //    part_1("03/test.txt");
-//    part_1("03/input.txt");
+    part_1("03/input.txt");
+//    part_1("03/my_test.txt");
 //    part_1("03/reddit_test.txt");
-    part_1("03/reddit_test2.txt");
+//    part_1("03/reddit_test2.txt");
 }
+
+LOG_NOT_ALREADY_FOUND :: false;
 
 Position :: struct {
     row, col: s16;
@@ -12,11 +15,15 @@ Number :: struct {
     row, col: s16;
     num: u64;
     len: s16;
-    found_syms: u16;
+    already_found: bool;
 }
 
 inside_range :: (num: Number, pos: s16) -> bool {
     return pos >= num.col && pos <= num.col + num.len;
+}
+
+is_sym :: (chr: u8) -> bool {
+    return !is_digit(chr) && chr != #char "." && chr != #char "\r";
 }
 
 part_1 :: (path: string) {
@@ -24,7 +31,8 @@ part_1 :: (path: string) {
     assert(success);
 
     nums: [..]Number;
-    syms: [..]Position;
+
+    // parse out the numbers
 
     lines := split(content, "\n"); // maybe handle Windows newlines (CRLF)
     for lines {
@@ -42,14 +50,11 @@ part_1 :: (path: string) {
                 }
                 num, found_num, remaining := string_to_int(num_start, 10, u64);
                 assert(found_num);
-                array_add(*nums, .{xx it_index, col, num, xx num_start.count, 0});
+                array_add(*nums, .{xx it_index, col, num, xx num_start.count, false});
 
                 col += xx num_start.count;
                 continue;
             } else
-            if line[0] != #char "." && line[0] != #char "\r" {
-                array_add(*syms, .{xx it_index, col});
-            }
 
             line.data += 1;
             line.count -= 1;
@@ -57,25 +62,35 @@ part_1 :: (path: string) {
         }
     }
 
-    // probably verry slow, but it should work.
-    total: u64;
-    for sym: syms {
-        for *num: nums {
-            if num.found_syms > 0 continue;
+    // check around the numbers
 
-            if num.row == sym.row - 1
-            || num.row == sym.row
-            || num.row == sym.row + 1 {
-                if inside_range(num, sym.col - 1)
-                || inside_range(num, sym.col)
-                || inside_range(num, sym.col + 1) {
+    total: u64;
+    for *num: nums {
+        for row: num.row - 1 .. num.row + 1 {
+            if num.already_found break;
+            if row < 0 || row >= lines.count continue;
+            line := lines[row];
+            for col: num.col - 1 .. num.col + num.len {
+                if col < 0 || col >= line.count continue;
+                chr := line[col];
+                if is_sym(chr) {
                     total += num.num;
-                    num.found_syms += 1;
+                    num.already_found = true;
+                    break;
                 }
             }
         }
     }
-    for nums if it.found_syms == 0 then print("%\n", it.num);
+
+    // debug output
+#if LOG_NOT_ALREADY_FOUND {
+    print("Not next to symbol: ");
+    for nums if !it.already_found then print("% ", it.num);
+    print("\n");
+}
+
+    // print result
+
     print("TOTAL %\n", total);
 }
 
