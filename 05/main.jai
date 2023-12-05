@@ -17,136 +17,189 @@
  * ========================================================================== */
 
 main :: () {
-	print("Part 1 Test:\n");
-	part_1("05/test.txt");
-	
-	// print("Part 1 Input:\n");
-	// part_1("05/input.txt");
+	// part_1("05/test.txt");
+	part_1("05/input.txt");
 }
 
-Map :: struct {
-	dest_start: s64;
-	src_start: s64;
-	length: s64;
+DEBUG :: false;
+
+Mapping :: struct {
+	dest, src, len : u64;
 }
+DEST :: 0;
+SRC  :: 1;
+LEN  :: 2;
 
-Category :: struct {
-	name : string;
-	maps : [..]Map;
-};
-
-parse_almanac :: (text : string) -> seeds : []s64, categories : []Category {
-	lines := split_newlines(text);
-
-	seeds : []s64 = ---;
-	categories : [..]Category;
-	category : Category;
-	first := true;
-	
-	for line : lines {
-		if line.count == 0 continue;
-
-		has_name, name, rest := split_from_left(line, ":");
-
-		if has_name {
-			if name == "seeds" {
-				if is_space(rest[0]) { // trim
-					rest.data += 1;
-					rest.count -= 1;
-				}
-
-				nums := split_the_number_list(rest);
-				seeds = array_copy(nums);
-				continue;
-			}
-			
-			if !first {
-				array_add(*categories, copy_category(category));
-			} else {
-				first = false;
-			}
-			
-			found_space, name_with_no_space := split_from_left(name, " ");
-			assert(found_space);
-			
-			category.name = name_with_no_space;
-			// @NOTE(martin): will this mess with the one we just stored???
-			array_reset(*category.maps);
-			continue;
-		}
-
-		nums := split_the_number_list(line);
-		array_add(*category.maps, nums_to_map(nums));
-	}
-	array_add(*categories, category);
-
-	assert(seeds.data != null); // can't have an almanac with no seeds
-	return seeds, categories;
-}
-
-copy_category :: (old: Category) -> Category {
-	new: Category;
-	new.name = copy_string(old.name);
-	for map : old.maps array_add(*new.maps, map);
-	return new;
-}
-
-nums_to_map :: (nums: []s64) -> Map {
-	assert(nums.count == 3);
-
-	return .{
-		dest_start = nums[0],
-		src_start = nums[1],
-		length = nums[2]
-	};
-}
-
-split_the_number_list :: (number_list: string) -> [..]s64 {
-	numbers : [..]s64;
-	for str_num : split(number_list, " ") {
-		// parsing non existant numbers would be stupid.
+split_to_numbers :: (line : string, sep : string = " ", $T := u64) -> []T {
+	res : [..]T;
+	for str_num : split(line, sep) {
 		if str_num.count == 0 continue;
-		num, has_number := string_to_int(str_num, 10, s64);
-		assert(has_number); // check your input.
-		
-		array_add(*numbers, num);
+		num, has_num := string_to_int(str_num, 10, T);
+		assert(has_num);
+		array_add(*res, num);
 	}
-	return numbers;
+	return res;
 }
 
-in_range :: (num : s64, start : s64, length : s64) -> bool {
-	return num >= start && num < start + length;
-}
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
-part_1 :: (path: string) {
+part_1 :: (path : string) {
 	contents, success := read_entire_file(path);
 	assert(success);
 
-	seeds, categories := parse_almanac(contents);
-
-	lowest : s64 = 1 << 62;
-	for seed : seeds {
-		print("Seed: %\n", seed);
-		value := seed;
-		for category : categories {
-			for map : category.maps if in_range(value, map.src_start, map.length) {
-				value += map.dest_start - map.src_start;
-				break;
-			}
-			print("\t% -- %\n", value, category);
+	seeds : []u64 = ---;
+	map : [..]Mapping;
+	has_seeds := false;
+	reading_map := false;
+	
+	for line : split_newlines(contents) {
+		if !has_seeds && begins_with(line, "seeds:") {
+			success, _, numbers := split_from_left(line, ": ");
+			seeds = split_to_numbers(numbers);
+			has_seeds = true;
+			continue;
 		}
-		print("\n");
-		if value < lowest then lowest = value;
+		assert(has_seeds); // we need seeds
+
+		if line.count == 0 {
+			if reading_map {
+#if DEBUG {
+	print("map :: [\n");
+	for mapping : map print("\tMapping.{dest = %, src = %, len = %}\n",
+							mapping.dest, mapping.src, mapping.len);
+	print("]\n");
+}
+				
+				for *seed : seeds {
+#if DEBUG {
+	print("% -> ", seed.*);
+	changed := false;
+}
+					for mapping : map {
+						if seed.* >= mapping.src && seed.* <= mapping.src + mapping.len - 1 {
+							seed.* += mapping.dest - mapping.src;
+#if DEBUG {
+	print("% -- % Changed\n", seed.*, mapping);
+	changed = true;
+}
+							break;
+						}
+					}
+#if DEBUG {
+	if !changed then print("%\n", seed.*);
+}
+				}
+#if DEBUG {
+	print("\n");
+}
+				reading_map = false;
+				array_reset(*map);
+			}
+			continue;
+		}
+		
+		if ends_with(line, "map:") {
+			reading_map = true;
+			continue;
+		}
+
+		nums := split_to_numbers(line);
+		assert(nums.count == 3);
+		array_add(*map, .{
+			dest = nums[DEST],
+			src  = nums[SRC],
+			len  = nums[LEN]
+		});
+	}
+
+	lowest : u64 = 1 << 63;
+	for seed : seeds {
+		if seed < lowest then lowest = seed;
 	}
 
 	print("RESULT %\n", lowest);
 }
 
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
 part_2 :: (path: string) {
 	contents, success := read_entire_file(path);
 	assert(success);
+	seeds : []u64 = ---;
+	map : [..]Mapping;
+	has_seeds := false;
+	reading_map := false;
+	
+	for line : split_newlines(contents) {
+		if !has_seeds && begins_with(line, "seeds:") {
+			success, _, numbers := split_from_left(line, ": ");
+			seeds = split_to_numbers(numbers);
+			has_seeds = true;
+			continue;
+		}
+		assert(has_seeds); // we need seeds
 
-	// @TODO(martin): Implement Day 2.
+		if line.count == 0 {
+			if reading_map {
+#if DEBUG {
+	print("map :: [\n");
+	for mapping : map print("\tMapping.{dest = %, src = %, len = %}\n",
+							mapping.dest, mapping.src, mapping.len);
+	print("]\n");
+}
+				
+				for *seed : seeds {
+#if DEBUG {
+	print("% -> ", seed.*);
+	changed := false;
+}
+					for mapping : map {
+						if seed.* >= mapping.src && seed.* <= mapping.src + mapping.len - 1 {
+							seed.* += mapping.dest - mapping.src;
+#if DEBUG {
+	print("% -- % Changed\n", seed.*, mapping);
+	changed = true;
+}
+							break;
+						}
+					}
+#if DEBUG {
+	if !changed then print("%\n", seed.*);
+}
+				}
+#if DEBUG {
+	print("\n");
+}
+				reading_map = false;
+				array_reset(*map);
+			}
+			continue;
+		}
+		
+		if ends_with(line, "map:") {
+			reading_map = true;
+			continue;
+		}
+
+		nums := split_to_numbers(line);
+		assert(nums.count == 3);
+		array_add(*map, .{
+			dest = nums[DEST],
+			src  = nums[SRC],
+			len  = nums[LEN]
+		});
+	}
+
+	lowest : u64 = 1 << 63;
+	for seed : seeds {
+		if seed < lowest then lowest = seed;
+	}
+
+	print("RESULT %\n", lowest);
 }
 
 #import "File";
