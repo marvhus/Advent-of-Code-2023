@@ -40,5 +40,5 @@ fi
 set -xe
 
 mkdir "${day}"
-touch "${day}/main.jai"
+cp template.jai "${day}/main.jai"
 touch "${day}/test.txt"
