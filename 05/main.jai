@@ -17,14 +17,20 @@
  * ========================================================================== */
 
 main :: () {
-	// part_1("05/test.txt");
-	part_1("05/input.txt");
+	//part_1("05/test.txt");
+	//part_1("05/input.txt");
+	//part_2("05/test.txt");
+	part_2("05/input.txt");
 }
 
 DEBUG :: false;
 
 Mapping :: struct {
 	dest, src, len : u64;
+}
+Map :: []Mapping;
+Seed_Range :: struct {
+	src, len : u64;
 }
 DEST :: 0;
 SRC  :: 1;
@@ -65,35 +71,14 @@ part_1 :: (path : string) {
 
 		if line.count == 0 {
 			if reading_map {
-#if DEBUG {
-	print("map :: [\n");
-	for mapping : map print("\tMapping.{dest = %, src = %, len = %}\n",
-							mapping.dest, mapping.src, mapping.len);
-	print("]\n");
-}
-				
 				for *seed : seeds {
-#if DEBUG {
-	print("% -> ", seed.*);
-	changed := false;
-}
 					for mapping : map {
 						if seed.* >= mapping.src && seed.* <= mapping.src + mapping.len - 1 {
 							seed.* += mapping.dest - mapping.src;
-#if DEBUG {
-	print("% -- % Changed\n", seed.*, mapping);
-	changed = true;
-}
 							break;
 						}
 					}
-#if DEBUG {
-	if !changed then print("%\n", seed.*);
-}
 				}
-#if DEBUG {
-	print("\n");
-}
 				reading_map = false;
 				array_reset(*map);
 			}
@@ -127,79 +112,86 @@ part_1 :: (path : string) {
 ////////////////////////////////////////////////////////////
 
 part_2 :: (path: string) {
-	contents, success := read_entire_file(path);
-	assert(success);
-	seeds : []u64 = ---;
-	map : [..]Mapping;
-	has_seeds := false;
-	reading_map := false;
+	seed_ranges : [..]Seed_Range;
+	maps : [..]Map;
 	
-	for line : split_newlines(contents) {
-		if !has_seeds && begins_with(line, "seeds:") {
-			success, _, numbers := split_from_left(line, ": ");
-			seeds = split_to_numbers(numbers);
-			has_seeds = true;
-			continue;
-		}
-		assert(has_seeds); // we need seeds
-
-		if line.count == 0 {
-			if reading_map {
-#if DEBUG {
-	print("map :: [\n");
-	for mapping : map print("\tMapping.{dest = %, src = %, len = %}\n",
-							mapping.dest, mapping.src, mapping.len);
-	print("]\n");
-}
-				
-				for *seed : seeds {
-#if DEBUG {
-	print("% -> ", seed.*);
-	changed := false;
-}
-					for mapping : map {
-						if seed.* >= mapping.src && seed.* <= mapping.src + mapping.len - 1 {
-							seed.* += mapping.dest - mapping.src;
-#if DEBUG {
-	print("% -- % Changed\n", seed.*, mapping);
-	changed = true;
-}
-							break;
-						}
-					}
-#if DEBUG {
-	if !changed then print("%\n", seed.*);
-}
-				}
-#if DEBUG {
-	print("\n");
-}
-				reading_map = false;
-				array_reset(*map);
-			}
-			continue;
-		}
+	{
+		contents, success := read_entire_file(path);
+		assert(success);
+		map : [..]Mapping;
+		has_seeds := false;
+		reading_map := false;
 		
-		if ends_with(line, "map:") {
-			reading_map = true;
-			continue;
+		print("Parsing\n");
+		for line : split_newlines(contents) {
+			if !has_seeds && begins_with(line, "seeds:") {
+				success, _, numbers := split_from_left(line, ": ");
+				tmp_seed_ranges := split_to_numbers(numbers);
+				assert(seed_ranges.count % 2 == 0); // has to be divisable by 2
+				i := 0;
+				while i < tmp_seed_ranges.count {
+					src := tmp_seed_ranges[i];
+					len := tmp_seed_ranges[i+1];
+					array_add(*seed_ranges, Seed_Range.{src, len});
+					i += 2;
+				}
+				has_seeds = true;
+				continue;
+			}
+			assert(has_seeds); // we need seeds
+			
+			if line.count == 0 {
+				if reading_map {
+					array_add(*maps, array_copy(map));
+					array_reset(*map);
+				}
+				continue;
+			}
+			
+			if ends_with(line, "map:") {
+				reading_map = true;
+				continue;
+			}
+			
+			nums := split_to_numbers(line);
+			assert(nums.count == 3);
+			array_add(*map, .{
+				dest = nums[DEST],
+				src  = nums[SRC],
+				len  = nums[LEN]
+			});
 		}
-
-		nums := split_to_numbers(line);
-		assert(nums.count == 3);
-		array_add(*map, .{
-			dest = nums[DEST],
-			src  = nums[SRC],
-			len  = nums[LEN]
-		});
+		print("Parsed\n");
 	}
 
+	print("Seed Ranges: %\n", seed_ranges.count);
+	print("Maps: %\n", maps.count);
+	
 	lowest : u64 = 1 << 63;
-	for seed : seeds {
-		if seed < lowest then lowest = seed;
+	// ......
+	for seed_range : seed_ranges {
+		print("Seed Range %, % : time: %\n", it_index, seed_range, get_time());
+        count : u64 = 0;
+        first := true;
+		for seed : seed_range.src .. seed_range.src + seed_range.len - 1 {
+            if !first && count % 10_000_000 == 0 {
+                print("10M Seeds. seed: %, time: %\n", seed, get_time());
+            }
+            first = false;
+            count += 1;
+			value := seed;
+			for map : maps {
+				for mapping : map {
+					if value >= mapping.src && value < mapping.src + mapping.len {
+						value += mapping.dest - mapping.src;
+					}
+				}
+			}
+			if value < lowest then lowest = value;
+		}
 	}
-
-	print("RESULT %\n", lowest);
+	print("\n-------------------------\nLOWEST %\n", lowest);
+	
 }
 
 #import "File";
