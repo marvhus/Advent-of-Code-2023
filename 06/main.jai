@@ -17,8 +17,10 @@
  * ========================================================================== */
 
 main :: () {
-	//	part_1("06/test.txt");
+	// part_1("06/test.txt");
 	part_1("06/input.txt");
+	// part_2("06/test.txt");
+	part_2("06/input.txt");
 }
 
 Game :: struct {
@@ -33,6 +35,21 @@ strip_spaces :: (str : string) -> string {
 		tmp_str.data += 1;
 	}
 	return tmp_str;
+}
+
+parse_num_list_2 :: (list : string) -> u64 {
+	sb : String_Builder;
+	init_string_builder(*sb);
+	// prepare
+	list_str := strip_spaces(list);
+	for split(list_str, "  ") {
+		list_str_2 := strip_spaces(it);
+		if list_str_2.count == 0 continue; // we don't need spaces
+		append(*sb, list_str_2);
+	}
+	num, has_num := string_to_int(builder_to_string(*sb), 10, u64);
+	assert(has_num);
+	return num;
 }
 
 parse_num_list :: (list : string) -> []u32 {
@@ -83,6 +100,7 @@ parse_input :: (text : string) -> []Game {
 }
 
 part_1 :: (path: string) {
+	print("PART 1!\n");
 	contents, success := read_entire_file(path);
 	assert(success);
 
@@ -107,10 +125,27 @@ part_1 :: (path: string) {
 }
 
 part_2 :: (path: string) {
+	print("PART 2\n");
 	contents, success := read_entire_file(path);
 	assert(success);
 
-	// @TODO(martin): Implement Day 2.
+	time : u64;
+	dist : u64;
+	for line : split_newlines(contents) {
+		if line.count == 0 continue;
+		if begins_with(line, "Time:") {
+			success, _ , list := split_from_left(line, "Time:");
+			time = parse_num_list_2(list);
+		} else if begins_with(line, "Distance:") {
+			success, _, list := split_from_left(line, "Distance:");
+			dist = parse_num_list_2(list);
+		}
+	}
+	possible : u32;
+	for 1..time-1 {
+		if it * (time - it) > dist then possible += 1;
+	}
+	print("POSSIBLE %\n", possible);
 }
 
 #import "File";
