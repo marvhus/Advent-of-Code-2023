@@ -67,58 +67,37 @@ parse_num_list :: (list : string) -> []u32 {
 	return res;
 }
 
-parse_input :: (text : string) -> []Game {
-	game_times : []u32;
-	game_dists : []u32;
-	for line, line_num : split_newlines(text) {
-		if line.count == 0 continue;
-		if begins_with(line, "Time:") {
-			success, _, list := split_from_left(line, "Time:");
-			assert(success);
-			game_times = parse_num_list(list);
-		}
-		else if begins_with(line, "Distance:") {
-			success, _, list := split_from_left(line, "Distance:");
-			assert(success);
-			game_dists = parse_num_list(list);
-		}
-		else {
-			assert(false, "Unknown value");
-		}
-	}
-	assert(game_times.count == game_dists.count);
-	assert(game_times.count + game_dists.count > 0);
-	
-	games : [..]Game;
-
-	for 0..game_times.count-1 {
-		time := game_times[it];
-		dist := game_dists[it];
-		array_add(*games, .{time, dist});
-	}
-	return games;
-}
-
 part_1 :: (path: string) {
 	print("PART 1!\n");
 	contents, success := read_entire_file(path);
 	assert(success);
 
-	games := parse_input(contents);
+	times : []u32;
+	dists : []u32;
+	for line : split_newlines(contents) {
+		if line.count == 0 continue;
+		if begins_with(line, "Time:") {
+			success, _, list := split_from_left(line, "Time:");
+			times = parse_num_list(list);
+		} else if begins_with(line, "Distance:") {
+			success, _, list := split_from_left(line, "Distance:");
+			dists = parse_num_list(list);
+		}
+	}
+	assert(times.count == dists.count);
+	assert(times.count + dists.count > 0);
+
 	total : u32;
-	for game : games {
+	for 0..times.count-1 {
 		possible : u32;
-		for time : 1 .. game.time_ms - 1 {
-			if time * (game.time_ms - time) > game.dist_mm {
-				possible += 1;
-			}
+		time := times[it];
+		dist := dists[it];
+		for 1..time-1 {
+			if it * (time - it) > dist then possible += 1;
 		}
 		if possible > 0 {
-			if total == 0 {
-				total = possible;
-			} else {
-				total *= possible;
-			}
+			if total == 0 then total = possible;
+			else total *= possible;
 		}
 	}
 	print("TOTAL %\n", total);
