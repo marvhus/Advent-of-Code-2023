@@ -1,0 +1,119 @@
+/* =========================================================================
+ * This is template.jai
+ * Copyright (C) 2023  marvhus
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * ========================================================================== */
+
+main :: () {
+	//	part_1("06/test.txt");
+	part_1("06/input.txt");
+}
+
+Game :: struct {
+	time_ms     : u32;
+	dist_mm : u32;
+}
+
+strip_spaces :: (str : string) -> string {
+	tmp_str := str;
+	while tmp_str.count > 0 && is_space(tmp_str[0]) {
+		tmp_str.count -= 1;
+		tmp_str.data += 1;
+	}
+	return tmp_str;
+}
+
+parse_num_list :: (list : string) -> []u32 {
+	res : [..]u32;
+	// prepare
+	time_list_str := strip_spaces(list);
+	for time_str : split(time_list_str, "  ") {
+		// ... it may have spaces
+		time_str_2 := strip_spaces(time_str);
+		if time_str_2.count == 0 continue; // don't parse spaces
+		num, has_num := string_to_int(time_str_2, 10, u32);
+		assert(has_num, sprint("missing number. list : '%', str : '%'", list, time_str_2));
+		array_add(*res, num);
+	}
+	return res;
+}
+
+parse_input :: (text : string) -> []Game {
+	game_times : []u32;
+	game_dists : []u32;
+	for line, line_num : split_newlines(text) {
+		if line.count == 0 continue;
+		if begins_with(line, "Time:") {
+			success, _, list := split_from_left(line, "Time:");
+			assert(success);
+			game_times = parse_num_list(list);
+		}
+		else if begins_with(line, "Distance:") {
+			success, _, list := split_from_left(line, "Distance:");
+			assert(success);
+			game_dists = parse_num_list(list);
+		}
+		else {
+			assert(false, "Unknown value");
+		}
+	}
+	assert(game_times.count == game_dists.count);
+	assert(game_times.count + game_dists.count > 0);
+	
+	games : [..]Game;
+
+	for 0..game_times.count-1 {
+		time := game_times[it];
+		dist := game_dists[it];
+		array_add(*games, .{time, dist});
+	}
+	return games;
+}
+
+part_1 :: (path: string) {
+	contents, success := read_entire_file(path);
+	assert(success);
+
+	games := parse_input(contents);
+	total : u32;
+	for game : games {
+		possible : u32;
+		for time : 1 .. game.time_ms - 1 {
+			if time * (game.time_ms - time) > game.dist_mm {
+				possible += 1;
+			}
+		}
+		if possible > 0 {
+			if total == 0 {
+				total = possible;
+			} else {
+				total *= possible;
+			}
+		}
+	}
+	print("TOTAL %\n", total);
+}
+
+part_2 :: (path: string) {
+	contents, success := read_entire_file(path);
+	assert(success);
+
+	// @TODO(martin): Implement Day 2.
+}
+
+#import "File";
+#import "String";
+#import "Basic";
+#import "AoC_Utils";
