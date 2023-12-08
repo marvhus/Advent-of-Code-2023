@@ -16,8 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  * ========================================================================== */
 
-main :: () {
+run :: (path : string, func : #type (string)->()) {
+	print("Running with '%'\n", path);
+}
 
+main :: () {
+	print("=== Part 1 ===\n");
+	run("00/test.txt", part_1);
+	run("00/input.txt", part_1);
+	
+	print("=== Part 2 ===\n");
+	run("00/test.txt", part_2);
+	run("00/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
