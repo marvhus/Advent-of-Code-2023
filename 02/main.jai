@@ -32,17 +32,17 @@ main :: () {
 }
 
 Size :: struct {
-	l, w, h : u32; // length width height
+	l, w, h : u64; // length width height
 }
 
 parse :: (input : string) -> []Size {
 	sizes : [..]Size;
 	for line : split_newlines(input) {
 		if line.count == 0 continue;
-		nums : [3]u32;
+		nums : [3]u64;
 		for num_str, i : split(line, "x") {
 			assert(i < 3);
-			num, has_num := string_to_int(num_str, 10, u32);
+			num, has_num := string_to_int(num_str, 10, u64);
 			assert(has_num);
 			nums[i] = num;
 		}
@@ -55,7 +55,7 @@ part_1 :: (path: string) {
 	contents, success := read_entire_file(path);
 	assert(success);
 
-	total : u32;
+	total : u64;
 	for size : parse(contents) {
 		side_1 := size.l * size.w;
 		side_2 := size.w * size.h;
@@ -70,7 +70,16 @@ part_2 :: (path: string) {
 	contents, success := read_entire_file(path);
 	assert(success);
 
-	// @TODO(martin): Implement Day 2.
+	total : u64;
+	for size : parse(contents) {
+		wrap_1 := size.l * 2 + size.w * 2;
+		wrap_2 := size.w * 2 + size.h * 2;
+		wrap_3 := size.h * 2 + size.l * 2;
+		wrap := min(wrap_1, min(wrap_2, wrap_3));
+		bow := size.l * size.w * size.h;
+		total += wrap + bow;
+	}
+	print("Result: %\n", total);
 }
 
 #import "File";
