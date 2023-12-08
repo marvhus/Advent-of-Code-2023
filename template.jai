@@ -18,6 +18,7 @@
 
 run :: (path : string, func : #type (string)->()) {
 	print("Running with '%'\n", path);
+	func(path);
 }
 
 main :: () {
