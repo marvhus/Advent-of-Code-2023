@@ -16,10 +16,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  * ========================================================================== */
 
+run :: (path : string, func : #type (string) -> ()) {
+	print("Running with '%'\n", path);
+	func(path);
+}
+
 main :: () {
-	// part_1("08/test.txt");
-	// part_1("08/test2.txt");
-	part_1("08/input.txt");
+	print("=== Part 1 ===\n");
+	run("08/test.txt", part_1);
+	run("08/test2.txt", part_1);
+	run("08/input.txt", part_1);
+
+	print("=== Part 2 ===\n");
+	run("08/test3.txt", part_2);
+	run("08/input.txt", part_2);
 }
 
 LeftRight :: enum {
@@ -29,13 +39,8 @@ LeftRight :: enum {
 Node :: struct {
 	left, right : string;
 }
-Map :: struct {
-	directions : []LeftRight;
 
-	nodes : Table(string, Node);
-}
-
-parse_map :: (text : string) -> map: Map {
+parse_map :: (text : string) -> directions: []LeftRight, nodes: Table(string, Node) {
 	success, directions_str, node_lines := split_from_left(text, "\n\n");
 	
 	directions : [..]LeftRight;
@@ -66,43 +71,76 @@ parse_map :: (text : string) -> map: Map {
 		}
 	}
 
-	return .{directions, nodes};
+	return directions, nodes;
+}
+
+solve :: (
+	directions : []LeftRight,
+	nodes : Table(string, Node),
+	start : string,
+	check : #type (string) -> bool
+) -> u64 {
+	count : u64;
+	current := start;
+	while true {
+		node, success := table_find(*nodes, current);
+		assert(success);
+		if directions[count % xx directions.count] == {
+			case .Left; current = node.left;
+			case .Right; current = node.right;
+		}
+		count += 1;
+		if check(current) break;
+	}
+	return count;
 }
 
 part_1 :: (path: string) {
-	print("Part 1.\n");
 	contents, success := read_entire_file(path);
 	assert(success);
 
-	map := parse_map(contents);
-
-	steps : u32;
-	current := "AAA";
-	found := false;
-	while !found {
-		for direction : map.directions {
-			if current == "ZZZ" {
-				found = true;
-				break;
-			}
-			node, success := table_find(*map.nodes, current);
-			assert(success);
-			print("%, %\n", current, node);
-			if direction == {
-				case .Left; current = node.left;
-				case .Right; current = node.right;
-			}
-			steps += 1;
-		}
+	check :: (str : string) -> bool {
+		return str == "ZZZ";
 	}
-	print("Found % in % steps.\n", current, steps);
+	
+	directions, nodes := parse_map(contents);
+	steps := solve(directions, nodes, "AAA", check);
+
+	print("Result: %\n", steps);
 }
 
 part_2 :: (path: string) {
 	contents, success := read_entire_file(path);
 	assert(success);
 
-	// @TODO(martin): Implement Day 2.
+	gcd :: (a : u64, b : u64) -> u64 {
+		if b == 0 return a;
+		return gcd(b, a % b);
+	}
+	lcm :: (a : u64, b : u64) -> u64 {
+		return a / gcd(a, b) * b;
+	}
+	fold_lcm :: (value : u64, values : []u64) -> u64 {
+		res := value;
+		for val : values {
+			res = lcm(res, val);
+		}
+		return res;
+	}
+	check :: (str : string) -> bool {
+		return ends_with(str, "Z");
+	}
+	
+	directions, nodes := parse_map(contents);
+	counts : [..]u64;
+	for _, key : nodes {
+		if !ends_with(key, "A") continue;
+		count := solve(directions, nodes, key, check);
+		array_add(*counts, count);
+	}
+	
+	steps := fold_lcm(1, counts);
+	print("Result: %\n", steps);
 }
 
 #import "File";
