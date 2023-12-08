@@ -65,8 +65,21 @@ part_1 :: (path: string) {
 part_2 :: (path: string) {
 	contents, success := read_entire_file(path);
 	assert(success);
-
-	// @TODO(martin): Implement Day 2.
+	
+	floor : int;
+	res : int;
+	directions := parse(contents);
+	for direction, idx : directions {
+		if direction == {
+			case .Up; floor += 1;
+			case .Down; floor -= 1;
+		}
+		if floor < 0 {
+			res = idx + 1;
+			break;
+		}
+	}
+	print("Result: %\n", res);
 }
 
 #import "File";
