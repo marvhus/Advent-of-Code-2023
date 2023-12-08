@@ -30,6 +30,8 @@ main :: () {
 	
 	print("=== Part 2 ===\n");
 	run("03/test.txt", part_2);
+	run("03/test2.txt", part_2);
+	run("03/test3.txt", part_2);
 	run("03/input.txt", part_2);
 }
 
@@ -40,7 +42,7 @@ Direction :: enum {
 	West; // <
 }
 Position :: struct {
-	x, y : s32;
+	x, y : s32 = 0;
 }
 
 pos_to_str :: (pos : Position) -> string {
@@ -63,8 +65,8 @@ part_1 :: (path: string) {
 	assert(success);
 
 	houses : Table(string, bool);
-	pos := Position.{0, 0};
-	table_add(*houses, pos_to_str(pos), true);
+	pos : Position;
+	table_add(*houses, "0:0", true);
 	for direction : parse(contents) {
 		if direction == {
 			case .North; pos.y += 1;
@@ -84,7 +86,23 @@ part_2 :: (path: string) {
 	contents, success := read_entire_file(path);
 	assert(success);
 
-	// @TODO(martin): Implement Day 2.
+	houses : Table(string, bool);
+	pos : [2]Position;
+	table_add(*houses, "0:0", true);
+	for direction, i : parse(contents) {
+		idx := i % pos.count;
+		if direction == {
+			case .North; pos[idx].y += 1;
+			case .South; pos[idx].y -= 1;
+			case .East; pos[idx].x += 1;
+			case .West; pos[idx].x -= 1;
+		}
+		id := pos_to_str(pos[idx]);
+		if !table_contains(*houses, id) {
+			table_add(*houses, id, true);
+		}
+	}
+	print("Result: %\n", houses.count);
 }
 
 #import "File";
