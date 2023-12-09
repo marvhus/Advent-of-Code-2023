@@ -88,6 +88,18 @@ extrapolate :: (nums : [][]s64, func : #type ([]s64, s64) -> s64) -> s64 {
 	return extrapolated;
 }
 
+solve :: (input : string, func : #type ([]s64, s64) -> s64) -> s64 {
+	total : s64;
+	for line : split_newlines(input) {
+		if line.count == 0 continue;
+		nums := parse_line(line);
+		generated := generate_line(nums);
+		res := extrapolate(generated, func);
+		total += res;
+	}
+	return total;
+}
+
 part_1 :: (path: string) {
 	func :: (xs : []s64, y : s64) -> s64 {
 		return xs[xs.count-1] + y;
@@ -96,14 +108,7 @@ part_1 :: (path: string) {
 	contents, success := read_entire_file(path);
 	assert(success);
 
-	total : s64;
-	for line : split_newlines(contents) {
-		if line.count == 0 continue;
-		nums := parse_line(line);
-		generated := generate_line(nums);
-		res := extrapolate(generated, func);
-		total += res;
-	}
+	total := solve(contents, func);
 	print("Result: %\n", total);
 }
 
@@ -115,15 +120,8 @@ part_2 :: (path: string) {
 
 	contents, success := read_entire_file(path);
 	assert(success);
-
-	total : s64;
-	for line : split_newlines(contents) {
-		if line.count == 0 continue;
-		nums := parse_line(line);
-		generated := generate_line(nums);
-		res := extrapolate(generated, func);
-		total += res;
-	}
+	
+	total := solve(contents, func);
 	print("Result: %\n", total);
 }
 
