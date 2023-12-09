@@ -23,6 +23,6 @@ jai $path -quiet -import_dir ../modules
 
 if [[ "$2" == "run" ]]; then
     echo "=== RUNNING ==="
-    $dir/main
+    time $dir/main
 fi
 
