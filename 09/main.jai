@@ -43,8 +43,7 @@ parse_line :: (line : string) -> []s64 {
 
 solve_line :: (
 	nums : []s64,
-	func : #type ([]s64) -> (s64),
-	func2 : #type (s64, s64) -> (s64)
+	func : #type ([]s64, s64) -> (s64)
 ) -> s64 {
 	all_zero :: (ns : []s64) -> bool {
 		for n : ns if n != 0 return false;
@@ -69,25 +68,23 @@ solve_line :: (
 		}
 		array_add(*all_nums, array_copy(current_nums));
 	}
-	extrapolated_nums : [..]s64;
+	extrapolated : s64;
 	{
-		array_add(*extrapolated_nums, 0);
 		idx := all_nums.count-2;
 		while idx >= 0 {
-			extrapolated := func2(func(all_nums[idx]), extrapolated_nums[extrapolated_nums.count-1]);
-			array_add(*extrapolated_nums, extrapolated);
+			extrapolated = func(
+				all_nums[idx],
+				extrapolated
+			);
 			idx -= 1;
 		}
 	}
-	return extrapolated_nums[extrapolated_nums.count-1];
+	return extrapolated;
 }
 
 part_1 :: (path: string) {
-	get_last :: (ns : []s64) -> s64 {
-		return ns[ns.count-1];
-	}
-	extrapolate :: (n1 : s64, n2 : s64) -> s64 {
-		return n1 + n2;
+	func :: (xs : []s64, y : s64) -> s64 {
+		return xs[xs.count-1] + y;
 	}
 
 	contents, success := read_entire_file(path);
@@ -97,20 +94,18 @@ part_1 :: (path: string) {
 	for line : split_newlines(contents) {
 		if line.count == 0 continue;
 		nums := parse_line(line);
-		res := solve_line(nums, get_last, extrapolate);
+		res := solve_line(nums, func);
 		total += res;
 	}
 	print("Result: %\n", total);
 }
 
 part_2 :: (path: string) {
-	get_first :: (ns : []s64) -> s64 {
-		assert(ns.count > 0);
-		return ns[0];
+	func :: (xs : []s64, y : s64) -> s64 {
+		assert(xs.count > 0);
+		return xs[0] - y;
 	}
-	extrapolate :: (n1 : s64, n2 : s64) -> s64 {
-		return n1 - n2;
-	}
+
 	contents, success := read_entire_file(path);
 	assert(success);
 
@@ -118,7 +113,7 @@ part_2 :: (path: string) {
 	for line : split_newlines(contents) {
 		if line.count == 0 continue;
 		nums := parse_line(line);
-		res := solve_line(nums, get_first, extrapolate);
+		res := solve_line(nums, func);
 		total += res;
 	}
 	print("Result: %\n", total);
