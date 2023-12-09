@@ -41,43 +41,49 @@ parse_line :: (line : string) -> []s64 {
 	return nums;
 }
 
-solve_line :: (
-	nums : []s64,
-	func : #type ([]s64, s64) -> (s64)
-) -> s64 {
+generate_line :: (nums : []s64) -> [][]s64 {
 	all_zero :: (ns : []s64) -> bool {
 		for n : ns if n != 0 return false;
 		return true;
 	}
+
 	all_nums : [..][]s64;
-	{
-		array_add(*all_nums, nums);
-		current_nums : [..]s64;
-		idx := 0;
-		while true {
-			for 0..all_nums[idx].count-2 {
-				n1 := all_nums[idx][it];
-				n2 := all_nums[idx][it + 1];
-				diff := n2 - n1;
-				array_add(*current_nums, diff);
-			}
-			if all_zero(current_nums) break;
-			array_add(*all_nums, array_copy(current_nums));
-			array_reset(*current_nums);
-			idx += 1;
+	array_add(*all_nums, nums);
+
+	current_nums : [..]s64;
+
+	idx := 0;
+	while true {
+		// combine the pairs
+		for 0..all_nums[idx].count-2 {
+			n1 := all_nums[idx][it];
+			n2 := all_nums[idx][it + 1];
+			diff := n2 - n1;
+			array_add(*current_nums, diff);
 		}
+		// exit if all zero
+		if all_zero(current_nums) break;
+		
+		// add the calculated diffs to the array of diffs
 		array_add(*all_nums, array_copy(current_nums));
+		array_reset(*current_nums);
+
+		idx += 1;
 	}
+	array_add(*all_nums, array_copy(current_nums));
+	return all_nums;
+}
+
+extrapolate :: (nums : [][]s64, func : #type ([]s64, s64) -> s64) -> s64 {
 	extrapolated : s64;
-	{
-		idx := all_nums.count-2;
-		while idx >= 0 {
-			extrapolated = func(
-				all_nums[idx],
-				extrapolated
-			);
-			idx -= 1;
-		}
+	// go backwards over nums, and calculate the extrapolated value.
+	idx := nums.count-2;
+	while idx >= 0 {
+		extrapolated = func(
+			nums[idx],
+			extrapolated
+		);
+		idx -= 1;
 	}
 	return extrapolated;
 }
@@ -94,7 +100,8 @@ part_1 :: (path: string) {
 	for line : split_newlines(contents) {
 		if line.count == 0 continue;
 		nums := parse_line(line);
-		res := solve_line(nums, func);
+		generated := generate_line(nums);
+		res := extrapolate(generated, func);
 		total += res;
 	}
 	print("Result: %\n", total);
@@ -113,7 +120,8 @@ part_2 :: (path: string) {
 	for line : split_newlines(contents) {
 		if line.count == 0 continue;
 		nums := parse_line(line);
-		res := solve_line(nums, func);
+		generated := generate_line(nums);
+		res := extrapolate(generated, func);
 		total += res;
 	}
 	print("Result: %\n", total);
