@@ -17,32 +17,32 @@
  * ========================================================================== */
 
 run :: (path : string, func : #type (string)->()) {
-	print("Running with '%'\n", path);
-	func(path);
+    print("Running with '%'\n", path);
+    func(path);
 }
 
 main :: () {
-	print("=== Part 1 ===\n");
-	run("00/test.txt", part_1);
-	run("00/input.txt", part_1);
-	
-	print("=== Part 2 ===\n");
-	run("00/test.txt", part_2);
-	run("00/input.txt", part_2);
+    print("=== Part 1 ===\n");
+    run("00/test.txt", part_1);
+    run("00/input.txt", part_1);
+
+    print("=== Part 2 ===\n");
+    run("00/test.txt", part_2);
+    run("00/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
-	contents, success := read_entire_file(path);
-	assert(success);
+    contents, success := read_entire_file(path);
+    assert(success);
 
-	// @TODO(martin): Implement Day 1.
+    // @TODO(martin): Implement Day 1.
 }
 
 part_2 :: (path: string) {
-	contents, success := read_entire_file(path);
-	assert(success);
+    contents, success := read_entire_file(path);
+    assert(success);
 
-	// @TODO(martin): Implement Day 2.
+    // @TODO(martin): Implement Day 2.
 }
 
 #import "File";
