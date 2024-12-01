@@ -57,7 +57,7 @@ part_1 :: (path: string) {
     // extract left and right values
     for row, row_index: rows {
         columns := split(row, "   ");
-        if (columns.count != 2) continue;
+        assert(columns.count == 2);
 
         left[row_index]  = string_to_int(columns[0], 10, u32);
         right[row_index] = string_to_int(columns[1], 10, u32);
@@ -85,7 +85,47 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Day 2.
+    // - add up the occurances in the right list of numbers
+    // - multiply each number in the left list by the amount of times it occours in the right list
+    // - add up these multiplied numbers
+
+    rows := split_newlines(contents);
+    // it includes an empty line at the end.
+    rows.count -= 1;
+
+    left := NewArray(rows.count, u32);
+    occurances: Table(u32, u32);
+
+    for row, row_index: rows {
+        columns := split(row, "   ");
+        assert(columns.count == 2);
+
+        left_value := string_to_int(columns[0], 10, u32);
+        right_value := string_to_int(columns[1], 10, u32);
+
+        left[row_index] = left_value;
+
+        entry, just_created := find_or_add(*occurances, right_value);
+        if just_created {
+            entry.* = 1;
+            continue;
+        }
+
+        entry.* += 1;
+    }
+
+    sum := 0;
+
+    for num: left {
+        entry, success := table_find(*occurances, num);
+        if success == false then continue;
+
+        sum += num * entry;
+    }
+
+    print("Result : %\n", sum);
+
+    array_free(left);
 }
 
 #import "File";
@@ -93,3 +133,4 @@ part_2 :: (path: string) {
 #import "Sort";
 #import "String";
 #import "AoC_Utils";
+#import "Hash_Table";
