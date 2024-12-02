@@ -35,14 +35,14 @@ part_1 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Day 1.
+    // @TODO(martin): Implement Part 1.
 }
 
 part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Day 2.
+    // @TODO(martin): Implement Part 2.
 }
 
 #import "File";
