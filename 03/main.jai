@@ -27,7 +27,7 @@ main :: () {
     run("03/input.txt", part_1);
 
     print("=== Part 2 ===\n");
-    run("03/test.txt", part_2);
+    run("03/test2.txt", part_2);
     run("03/input.txt", part_2);
 }
 
@@ -35,13 +35,21 @@ part_1 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    lines := split_newlines(contents);
-    lines.count -= 1;
-
     total := 0;
 
-    for line: lines {
-        total += sum_memory_line(line);
+    offset := 0;
+    while true {
+        buffer := string.{data = contents.data + offset, count = contents.count - offset};
+
+        valid, left, right, length := next_mul(buffer);
+        offset += length;
+
+        if valid == false {
+            // No more mul operations.
+            break;
+        }
+
+        total += left * right;
     }
 
     print("Result : %\n", total);
@@ -51,111 +59,129 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Part 2.
-}
+    total := 0;
+    enabled := true;
 
-sum_memory_line :: (line: string) -> int {
-    //print("Working on: %\n", line);
+    offset := 0;
+    while true {
+        buffer := string.{data = contents.data + offset, count = contents.count - offset};
 
-    sum := 0;
-
-    index := 0;
-    while index < line.count {
-        //print("------------\n");
-        buffer := string.{data = line.data + index, count = line.count - index};
-        valid, a, b, instruction_length := extract_mul_instruction(buffer);
+        valid, left, right, length, new_enabled := next_mul(buffer, is_part_2 = true, enabled_by_default = enabled);
+        enabled = new_enabled;
+        offset += length;
 
         if valid == false {
-            index += 1;
-            continue;
+            // No more mul operations in line.
+            break;
         }
 
-        //print("= mul(%,%)\n", a, b);
-
-        result := a * b;
-        sum += result;
-
-        index += instruction_length;
+        total += left * right;
     }
 
-    return sum;
+    print("Result : %\n", total);
 }
 
-extract_mul_instruction :: (line: string) -> (valid: bool, a: int, b: int, instruction_length: int) {
-    instruction_length := 0;
-    buffer := string.{data = line.data, count = line.count};
+next_mul :: (buffer: string, is_part_2 := false, enabled_by_default := true) -> (valid: bool, left: int, right: int, length: int, enabled: bool) {
+    enabled := enabled_by_default;
 
-    { // Check if begins with "mul"
-        PREFIX :: "mul";
-        if begins_with(buffer, PREFIX) == false {
-            //print("Doesn't start with prefix... %\n", buffer);
-            return false, 0, 0, 0;
+    offset := 0;
+    while offset < buffer.count {
+        if is_part_2 { // Do and dont.
+            offset_buffer := string.{data = buffer.data + offset, count = buffer.count - offset};
+            valid, new_enabled, length := extract_do_and_dont(offset_buffer);
+
+            if valid {
+                //if new_enabled print("!!ENABLED!!\n");
+                //else print("!!DISABLED!!\n");
+                enabled = new_enabled;
+                offset += length;
+                continue;
+            }
         }
 
-        buffer.count -= PREFIX.count;
-        buffer.data += PREFIX.count;
-        instruction_length += PREFIX.count;
+        { // Mul
+            offset_buffer := string.{data = buffer.data + offset, count = buffer.count - offset};
+            valid, left, right, length := extract_mul(offset_buffer); 
 
-        if buffer.count <= 0 {
-            //print("End of buffer.\n");
-            return false, 0, 0, 0;
-        }
-    }
-
-    { // Check if balanced parenthesis.
-        if buffer[0] != #char "(" {
-            //print("Missing ( after prefix... %\n", buffer);
-            return false, 0, 0, 0;
-        }
-
-        other_index := find_index_from_left(buffer, #char ")");
-        if other_index == -1 {
-            //print("Missing ) after (... %\n", buffer);
-            return false, 0, 0, 0;
-        }
-
-        buffer.count = other_index - 1;
-        buffer.data += 1;
-        instruction_length += other_index;
-    }
-
-    { // Validate inside parenthesis.
-        commas := 0;
-        for c: buffer {
-            if c == #char "," {
-                commas += 1;
-                if commas > 1 {
-                    //print("Duplicate comma... %\n", buffer);
-                    return false, 0, 0, 0;
+            if valid {
+                //print(" enabled: %", enabled);
+                if enabled {
+                    //print(" -- % %\n", left, right);
+                    offset += length;
+                    return true, left, right, offset, true;
                 }
-                continue;
+                //print("\n");
             }
+        }
 
-            if c >= #char "0" && c <= #char "9" {
-                continue;
-            }
+        offset += 1;
+    }
 
-            //print("Invalid character '%'... %\n", cast(string) u8.[c], buffer);
+    // No more mul in line
+    return false, 0, 0, 0, enabled;
+}
+
+extract_do_and_dont :: (buffer: string) -> (valid: bool, enabled: bool, length: int) {
+    DONT_PREFIX :: "don't()";
+    DO\ _PREFIX :: "do()";
+
+    if begins_with(buffer, DONT_PREFIX) {
+        return true, false, DONT_PREFIX.count;
+    }
+    if begins_with(buffer, DO_PREFIX) {
+        return true, true, DO_PREFIX.count;
+    }
+
+    return false, false, 0;
+}
+
+extract_mul :: (buffer: string) -> (valid: bool, left: int, right: int, length: int) {
+    offset := 0;
+
+    MUL_PREFIX :: "mul(";
+    if begins_with(buffer, MUL_PREFIX) == false {
+        return false, 0, 0, 0;
+    }
+    offset += MUL_PREFIX.count;
+
+    left, right: int;
+
+    { // Left side.
+        length := 0;
+        while offset < buffer.count && is_digit(buffer[offset]) {
+            left = (left * 10) + (buffer[offset] - #char "0");
+            offset += 1;
+            length += 1;
+        }
+        if length > 3 {
             return false, 0, 0, 0;
         }
     }
 
-    a, b: int;
-    { // Extract numbers
-        number_strings := split(buffer, ",");
-        assert(number_strings.count == 2);
+    if buffer[offset] != #char "," {
+        return false, 0, 0, 0;
+    }
+    offset += 1;
 
-        if number_strings[0].count > 3
-        || number_strings[1].count > 3 {
-            //print("Number string too long... %\n", number_strings);
+    { // Right side.
+        length := 0;
+        while offset < buffer.count && is_digit(buffer[offset]) {
+            right = (right * 10) + (buffer[offset] - #char "0");
+            offset += 1;
+            length += 1;
+        }
+        if length > 3 {
             return false, 0, 0, 0;
         }
-
-        a = string_to_int(number_strings[0], 10, int);
-        b = string_to_int(number_strings[1], 10, int);
     }
 
-    return true, a, b, instruction_length;
+    if buffer[offset] != #char ")" {
+        return false, 0, 0, 0;
+    }
+    offset += 1;
+
+    //print("%", string.{data = buffer.data, count = offset});
+    return true, left, right, offset;
 }
 
 #import "File";
