@@ -24,12 +24,11 @@ run :: (path : string, func : #type (string)->()) {
 main :: () {
     print("=== Part 1 ===\n");
     run("04/test.txt", part_1);
-    run("04/test2.txt", part_1);
     run("04/input.txt", part_1);
 
     print("=== Part 2 ===\n");
-    //run("04/test.txt", part_2);
-    //run("04/input.txt", part_2);
+    run("04/test2.txt", part_2);
+    run("04/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
@@ -59,7 +58,36 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Part 2.
+    lines := split_newlines(contents);
+    lines.count -= 1;
+
+    result: int;
+
+    // Expects every line to be the same length.
+    line_length := lines[0].count;
+
+    for row_index: 1..lines.count-2 {
+        for col_index: 1..line_length-2 {
+            if is_x_mas(lines, row_index, col_index) then result += 1;
+        }
+    }
+
+    print("Result : %\n", result);
+}
+
+is_x_mas :: (lines: []string, row_index: int, col_index: int) -> bool {
+    return (
+        // Center.
+        lines[row_index][col_index] == #char "A"
+    ) && (
+        // Diagonal. Top left - Bottom right
+        (lines[row_index - 1][col_index - 1] == #char "M" && lines[row_index + 1][col_index + 1] == #char "S")
+     || (lines[row_index - 1][col_index - 1] == #char "S" && lines[row_index + 1][col_index + 1] == #char "M")
+    ) && (
+        // Diagonal. Top right - Bottom right
+        (lines[row_index - 1][col_index + 1] == #char "M" && lines[row_index + 1][col_index - 1] == #char "S")
+     || (lines[row_index - 1][col_index + 1] == #char "S" && lines[row_index + 1][col_index - 1] == #char "M")
+    );
 }
 
 count_around :: (lines: []string, line_length: int, row_index: int, col_index: int) -> int {
