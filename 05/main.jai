@@ -26,9 +26,9 @@ main :: () {
     run("05/test.txt", part_1);
     run("05/input.txt", part_1);
 
-    //print("=== Part 2 ===\n");
-    //run("05/test.txt", part_2);
-    //run("05/input.txt", part_2);
+    print("=== Part 2 ===\n");
+    run("05/test.txt", part_2);
+    run("05/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
@@ -59,7 +59,43 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Part 2.
+    rules_section, updates_section := parse_sections(contents);
+    rules := parse_rules(rules_section);
+
+    total: int;
+
+    for update_line: split_newlines(updates_section) {
+        if update_line.count == 0 continue;
+
+        update_numbers := parse_update(update_line);
+
+        if ! is_valid_update(update_numbers, rules) {
+            fix_update(*update_numbers, rules);
+
+            total += update_numbers[update_numbers.count / 2];
+        }
+
+        array_free(update_numbers);
+    }
+
+    print("Result : %\n", total);
+}
+
+fix_update :: (update_numbers: *[]u8, rules: Table(u8, [..]u8)) {
+    while ! is_valid_update(update_numbers.*, rules) {
+        for a_index: 0 .. update_numbers.count - 2 {
+            for b_index: a_index + 1 .. update_numbers.count - 1 {
+                a := update_numbers.*[a_index];
+                b := update_numbers.*[b_index];
+
+                before_array, found := table_find(*rules, a);
+                if found && is_in_array(before_array, b) {
+                    update_numbers.*[a_index] = b;
+                    update_numbers.*[b_index] = a;
+                }
+            }
+        }
+    }
 }
 
 is_valid_update :: (update_numbers: []u8, rules: Table(u8, [..]u8)) -> bool {
@@ -70,15 +106,20 @@ is_valid_update :: (update_numbers: []u8, rules: Table(u8, [..]u8)) -> bool {
             b := update_numbers[b_index];
 
             before_array, found := table_find(*rules, a);
-            if !found continue;
+            if ! found continue;
 
-            for before_number: before_array {
-                if before_number == b return false;
-            }
+            if is_in_array(before_array, b) return false;
         }
     }
 
     return true;
+}
+
+is_in_array :: (array: []$T, value: T) -> bool {
+    for elem: array {
+        if value == elem return true;
+    }
+    return false;
 }
 
 //
