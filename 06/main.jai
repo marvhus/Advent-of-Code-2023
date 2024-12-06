@@ -22,9 +22,9 @@ run :: (path : string, func : #type (string)->()) {
 }
 
 main :: () {
-    //print("=== Part 1 ===\n");
-    //run("06/test.txt", part_1);
-    //run("06/input.txt", part_1);
+    print("=== Part 1 ===\n");
+    run("06/test.txt", part_1);
+    run("06/input.txt", part_1);
 
     print("=== Part 2 ===\n");
     run("06/test.txt", part_2);
@@ -57,23 +57,33 @@ part_2 :: (path: string) {
     assert(success);
 
     map, guard := parse_map(contents);
-
-    rotation_points: [..]Vector2_s16;
-    found_locations: Table(s32, void);
-
+    start_guard := guard;
     result := 0;
 
-    direction := guard.direction;
-    position := guard.position;
-    while ! guard_step(*guard, map) {
-        result += check_block_location(guard, rotation_points, *found_locations);
+    visited: Table(s32, void);
 
-        if direction != guard.direction {
-            direction = guard.direction;
-            array_add(*rotation_points, position);
+    while ! guard_step(*guard, map) {
+        key := ((cast(s32) guard.x) << 15) | (cast(s32) guard.y);
+        if table_contains(*visited, key) == false {
+            guard_copy := start_guard;
+
+            map.cells[map.width * guard.y + guard.x] = true;
+            defer map.cells[map.width * guard.y + guard.x] = false;
+
+            big_array_of_stuff := NewArray(map.width * map.height, Direction);
+            defer array_free(big_array_of_stuff);
+
+            while ! guard_step(*guard_copy, map) {
+                if big_array_of_stuff[map.width * guard_copy.y + guard_copy.x] == guard_copy.direction {
+                    result += 1;
+                    break;
+                }
+
+                big_array_of_stuff[map.width * guard_copy.y + guard_copy.x] = guard_copy.direction;
+            }
         }
 
-        position = guard.position;
+        find_or_add(*visited, key);
     }
 
     print("Result : %\n", result);
@@ -89,6 +99,7 @@ Map :: struct {
 }
 
 Direction :: enum {
+    NONE;
     NORTH;
     EAST;
     SOUTH;
@@ -98,67 +109,6 @@ Direction :: enum {
 Guard :: struct {
     using position: Vector2_s16;
     direction: Direction;
-}
-
-check_block_location :: (guard: Guard, rotation_points: [..]Vector2_s16, found_locations: *Table(s32, void)) -> (found: int) {
-    to_key :: (a: Vector2_s16) -> s32 {
-        x: s32 = xx a.x;
-        y: s32 = xx a.y;
-        return (x << 15) | y;
-    }
-
-    count := 0;
-
-    for rotation_point: rotation_points {
-        if #complete guard.direction == {
-            case .NORTH;
-                new := Vector2_s16.{ guard.x, guard.y - 1 };
-                key := to_key(new);
-
-                if table_contains(found_locations, key) == false
-                && guard.y == rotation_point.y
-                && guard.x < rotation_point.x {
-
-                    find_or_add(found_locations, key);
-                    count += 1;
-                }
-            case .EAST;
-                new := Vector2_s16.{ guard.x + 1, guard.y };
-                key := to_key(new);
-
-                if table_contains(found_locations, key) == false
-                && guard.x == rotation_point.x
-                && guard.y < rotation_point.y {
-
-                    find_or_add(found_locations, key);
-                    count += 1;
-                }
-            case .SOUTH;
-                new := Vector2_s16.{ guard.x, guard.y + 1 };
-                key := to_key(new);
-
-                if table_contains(found_locations, key) == false
-                && guard.y == rotation_point.y
-                && guard.x > rotation_point.x {
-
-                    find_or_add(found_locations, key);
-                    count += 1;
-                }
-            case .WEST;
-                new := Vector2_s16.{ guard.x - 1, guard.y };
-                key := to_key(new);
-
-                if table_contains(found_locations, key) == false
-                && guard.x == rotation_point.x
-                && guard.y > rotation_point.y {
-
-                    find_or_add(found_locations, key);
-                    count += 1;
-                }
-        }
-    }
-
-    return count;
 }
 
 parse_map :: (text: string) -> Map, Guard {
@@ -240,6 +190,8 @@ guard_step :: (using guard: *Guard, map: Map) -> outside_map: bool {
                     direction = .NORTH;
                     continue;
                 }
+            case .NONE;
+                assert(false);
         }
         break;
     }
@@ -249,6 +201,8 @@ guard_step :: (using guard: *Guard, map: Map) -> outside_map: bool {
         case .EAST;  x += 1;
         case .SOUTH; y += 1;
         case .WEST;  x -= 1;
+        case .NONE;
+            assert(false);
     }
 
     return is_outside_map(map, x, y);
