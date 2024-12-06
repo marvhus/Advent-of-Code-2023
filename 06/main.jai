@@ -22,13 +22,13 @@ run :: (path : string, func : #type (string)->()) {
 }
 
 main :: () {
-    print("=== Part 1 ===\n");
-    run("06/test.txt", part_1);
-    run("06/input.txt", part_1);
+    //print("=== Part 1 ===\n");
+    //run("06/test.txt", part_1);
+    //run("06/input.txt", part_1);
 
-    //print("=== Part 2 ===\n");
-    //run("06/test.txt", part_2);
-    //run("06/input.txt", part_2);
+    print("=== Part 2 ===\n");
+    run("06/test.txt", part_2);
+    run("06/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
@@ -56,7 +56,31 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Part 2.
+    map, guard := parse_map(contents);
+
+    rotation_points: [..]Vector2_s16;
+    found_locations: Table(s32, void);
+
+    result := 0;
+
+    direction := guard.direction;
+    position := guard.position;
+    while ! guard_step(*guard, map) {
+        result += check_block_location(guard, rotation_points, *found_locations);
+
+        if direction != guard.direction {
+            direction = guard.direction;
+            array_add(*rotation_points, position);
+        }
+
+        position = guard.position;
+    }
+
+    print("Result : %\n", result);
+}
+
+Vector2_s16 :: struct {
+    x, y: s16;
 }
 
 Map :: struct {
@@ -72,8 +96,69 @@ Direction :: enum {
 }
 
 Guard :: struct {
-    x, y: s16;
+    using position: Vector2_s16;
     direction: Direction;
+}
+
+check_block_location :: (guard: Guard, rotation_points: [..]Vector2_s16, found_locations: *Table(s32, void)) -> (found: int) {
+    to_key :: (a: Vector2_s16) -> s32 {
+        x: s32 = xx a.x;
+        y: s32 = xx a.y;
+        return (x << 15) | y;
+    }
+
+    count := 0;
+
+    for rotation_point: rotation_points {
+        if #complete guard.direction == {
+            case .NORTH;
+                new := Vector2_s16.{ guard.x, guard.y - 1 };
+                key := to_key(new);
+
+                if table_contains(found_locations, key) == false
+                && guard.y == rotation_point.y
+                && guard.x < rotation_point.x {
+
+                    find_or_add(found_locations, key);
+                    count += 1;
+                }
+            case .EAST;
+                new := Vector2_s16.{ guard.x + 1, guard.y };
+                key := to_key(new);
+
+                if table_contains(found_locations, key) == false
+                && guard.x == rotation_point.x
+                && guard.y < rotation_point.y {
+
+                    find_or_add(found_locations, key);
+                    count += 1;
+                }
+            case .SOUTH;
+                new := Vector2_s16.{ guard.x, guard.y + 1 };
+                key := to_key(new);
+
+                if table_contains(found_locations, key) == false
+                && guard.y == rotation_point.y
+                && guard.x > rotation_point.x {
+
+                    find_or_add(found_locations, key);
+                    count += 1;
+                }
+            case .WEST;
+                new := Vector2_s16.{ guard.x - 1, guard.y };
+                key := to_key(new);
+
+                if table_contains(found_locations, key) == false
+                && guard.x == rotation_point.x
+                && guard.y > rotation_point.y {
+
+                    find_or_add(found_locations, key);
+                    count += 1;
+                }
+        }
+    }
+
+    return count;
 }
 
 parse_map :: (text: string) -> Map, Guard {
@@ -95,12 +180,12 @@ parse_map :: (text: string) -> Map, Guard {
                     guard.direction = .NORTH;
                     guard.x = xx x;
                     guard.y = xx y;
-                case #char "v";
-                    guard.direction = .SOUTH;
-                    guard.x = xx x;
-                    guard.y = xx y;
                 case #char ">";
                     guard.direction = .EAST;
+                    guard.x = xx x;
+                    guard.y = xx y;
+                case #char "v";
+                    guard.direction = .SOUTH;
                     guard.x = xx x;
                     guard.y = xx y;
                 case #char "<";
@@ -161,15 +246,16 @@ guard_step :: (using guard: *Guard, map: Map) -> outside_map: bool {
 
     if #complete direction == {
         case .NORTH; y -= 1;
+        case .EAST;  x += 1;
         case .SOUTH; y += 1;
-        case .EAST; x += 1;
-        case .WEST; x -= 1;
+        case .WEST;  x -= 1;
     }
 
     return is_outside_map(map, x, y);
 }
 
 #import "File";
-#import "String";
 #import "Basic";
+#import "String";
 #import "AoC_Utils";
+#import "Hash_Table";
