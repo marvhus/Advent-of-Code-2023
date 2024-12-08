@@ -35,20 +35,46 @@ part_1 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
+    a := seconds_since_init();
+
     map := parse(contents);
+
+    b := seconds_since_init();
+
     result := count_unique_antinodes(map);
 
+    c := seconds_since_init();
+
     print("Result : %\n", result);
+    print("Total % ms - Parsing % ms - Calculating % ms\n",
+        (c - a) * 1000,
+        (b - a) * 1000,
+        (c - b) * 1000,
+    );
+    print("---\n");
 }
 
 part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
+    a := seconds_since_init();
+
     map := parse(contents);
+
+    b := seconds_since_init();
+
     result := count_unique_antinodes(map, is_part_2 = true);
 
+    c := seconds_since_init();
+
     print("Result : %\n", result);
+    print("Total % ms - Parsing % ms - Calculating % ms\n",
+        (c - a) * 1000,
+        (b - a) * 1000,
+        (c - b) * 1000,
+    );
+    print("---\n");
 }
 
 Map :: struct {
