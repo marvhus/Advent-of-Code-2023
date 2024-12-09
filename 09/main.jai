@@ -22,13 +22,13 @@ run :: (path : string, func : #type (string)->()) {
 }
 
 main :: () {
-    //print("=== Part 1 ===\n");
+    print("=== Part 1 ===\n");
     run("09/test.txt", part_1);
     run("09/input.txt", part_1);
 
-    //print("=== Part 2 ===\n");
-    //run("09/test.txt", part_2);
-    //run("09/input.txt", part_2);
+    print("=== Part 2 ===\n");
+    run("09/test.txt", part_2);
+    run("09/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
@@ -36,7 +36,7 @@ part_1 :: (path: string) {
     assert(success);
 
     blocks := parse(contents);
-    compress(blocks);
+    compress_blocks(blocks);
     result := calculate_checksum(blocks);
 
     print("Result : %\n", result);
@@ -46,7 +46,11 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Part 2.
+    blocks := parse(contents);
+    compress_chunks(blocks);
+    result := calculate_checksum(blocks);
+
+    print("Result : %\n", result);
 }
 
 Block :: struct {
@@ -69,17 +73,73 @@ calculate_checksum :: (blocks: []Block) -> u64 {
     return sum;
 }
 
-print_blocks :: (blocks: []Block) {
-    for block: blocks {
-        if block.kind == {
-            case .FILLED; print("%", block.id);
-            case .EMPTY;  print(".");
+compress_chunks :: (blocks: []Block) {
+    find_first :: (blocks: []Block, size: u8, max_index: int) -> (index: int) {
+        for block, index: blocks {
+            if block.kind == .FILLED continue;
+
+            found_size: u8;
+            for index..blocks.count - 1 {
+                if it >= max_index break;
+                if blocks[it].kind == .FILLED break;
+                found_size += 1;
+            }
+
+            if found_size < size continue;
+
+            return index;
         }
+        return -1;
     }
-    print("\n");
+    measure_length_backward :: (blocks: []Block, end: int) -> (size: u8) {
+        id := blocks[end].id;
+        size: u8;
+        index := end;
+        while index > 0 {
+            block := blocks[index];
+            if block.kind != .FILLED break;
+            if block.id != id break;
+            size += 1;
+            index -= 1;
+        }
+        return size;
+    }
+
+    end := blocks.count - 1;
+
+    while end > 0 {
+        block := blocks[end];
+
+        if block.kind == .EMPTY {
+            end -= 1;
+            continue;
+        }
+
+        required_size := measure_length_backward(blocks, end);
+        index := find_first(blocks, required_size, end);
+        end -= required_size - 1; // Move cursor to start of block.
+
+        if index < 0 {
+            end -= 1;
+            continue;
+        }
+
+        for 0..required_size-1 {
+            block_start: *Block = *blocks[index + it];
+            block_end: *Block = *blocks[end + it];
+
+            block_start.id = block_end.id;
+            block_start.kind = .FILLED;
+
+            block_end.id = BLOCK_ID_INVALID;
+            block_end.kind = .EMPTY;
+        }
+
+        end -= 1;
+    }
 }
 
-compress :: (blocks: []Block) {
+compress_blocks :: (blocks: []Block) {
     start := 0;
     end := blocks.count - 1;
 
@@ -104,13 +164,23 @@ compress :: (blocks: []Block) {
     }
 }
 
+print_blocks :: (blocks: []Block) {
+    for block: blocks {
+        if block.kind == {
+            case .FILLED; print("%", block.id);
+            case .EMPTY;  print(".");
+        }
+    }
+    print("\n");
+}
+
 parse :: (text: string) -> [..]Block {
     blocks: [..]Block;
     // NOTE(mvh): 5 should be around the average segment size, so this should get us close to around the amount of space needed.
     array_reserve(*blocks, text.count * 5);
 
     is_filled := true;
-    index: u32;
+    id: u64;
     for char: text {
         if char < #char "0" || #char "9" < char continue;
 
@@ -125,11 +195,11 @@ parse :: (text: string) -> [..]Block {
         if is_filled {
             for 1..size {
                 array_add(*blocks, Block.{
-                    id = index,
+                    id = id,
                     kind = .FILLED,
                 });
             }
-            index += 1;
+            id += 1;
             is_filled = false;
             continue;
         }
