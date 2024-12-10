@@ -26,9 +26,9 @@ main :: () {
     run("10/test.txt", part_1);
     run("10/input.txt", part_1);
 
-    //print("=== Part 2 ===\n");
-    //run("10/test.txt", part_2);
-    //run("10/input.txt", part_2);
+    print("=== Part 2 ===\n");
+    run("10/test.txt", part_2);
+    run("10/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
@@ -43,7 +43,7 @@ part_1 :: (path: string) {
     for trailhead: map.trailheads {
         for *v: visited { v.* = false; }
 
-        score := score_trail(map, trailhead.x, trailhead.y, visited);
+        score := score_trail(map, trailhead.x, trailhead.y, *visited);
         result += score;
     }
 
@@ -54,7 +54,15 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Part 2.
+    map := parse(contents);
+
+    result: int;
+    for trailhead: map.trailheads {
+        score := score_trail(map, trailhead.x, trailhead.y, null);
+        result += score;
+    }
+
+    print("Result : %\n", result);
 }
 
 Location :: struct {
@@ -79,13 +87,13 @@ get_cell :: (map: Map, x: int, y: int) -> u8 {
     return map.cells[map.width * y + x];
 }
 
-score_trail :: (map: Map, x: int, y: int, visited: []bool) -> int {
-    {
+score_trail :: (map: Map, x: int, y: int, visited: *[]bool) -> int {
+    if visited {
         index := map.width * y + x;
         assert(index < visited.count);
 
-        if visited[index] return 0;
-        visited[index] = true;
+        if visited.*[index] return 0;
+        visited.*[index] = true;
     }
 
     current := map.cells[map.width * y + x];
