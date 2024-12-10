@@ -35,9 +35,13 @@ part_1 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
+    a := seconds_since_init();
+
     map := parse(contents);
     visited := NewArray(map.width * map.height, bool);
     defer array_free(visited);
+
+    b := seconds_since_init();
 
     result: int;
     for trailhead: map.trailheads {
@@ -47,14 +51,26 @@ part_1 :: (path: string) {
         result += score;
     }
 
+    c := seconds_since_init();
+
     print("Result : %\n", result);
+    print("Total % ms - Parsing % ms - Calculating % ms\n",
+        (c - a) * 1000,
+        (b - a) * 1000,
+        (c - b) * 1000,
+    );
+    print("---\n");
 }
 
 part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
+    a := seconds_since_init();
+
     map := parse(contents);
+
+    b := seconds_since_init();
 
     result: int;
     for trailhead: map.trailheads {
@@ -62,7 +78,15 @@ part_2 :: (path: string) {
         result += score;
     }
 
+    c := seconds_since_init();
+
     print("Result : %\n", result);
+    print("Total % ms - Parsing % ms - Calculating % ms\n",
+        (c - a) * 1000,
+        (b - a) * 1000,
+        (c - b) * 1000,
+    );
+    print("---\n");
 }
 
 Location :: struct {
