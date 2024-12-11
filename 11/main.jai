@@ -36,12 +36,14 @@ part_1 :: (path: string) {
     assert(success);
 
     a := seconds_since_init();
-    result := simulate(contents, 25);
+    result := simulate(contents, 25,, temp);
     b := seconds_since_init();
 
     print("Result : %\n", result);
     print("Total % ms\n", (b - a) * 1000);
     print("---\n");
+
+    reset_temporary_storage();
 }
 
 part_2 :: (path: string) {
@@ -49,12 +51,14 @@ part_2 :: (path: string) {
     assert(success);
 
     a := seconds_since_init();
-    result := simulate(contents, 75);
+    result := simulate(contents, 75,, temp);
     b := seconds_since_init();
 
     print("Result : %\n", result);
     print("Total % ms\n", (b - a) * 1000);
     print("---\n");
+
+    reset_temporary_storage();
 }
 
 simulate :: (input: string, count: int) -> result: u64 {
@@ -68,15 +72,13 @@ simulate :: (input: string, count: int) -> result: u64 {
         return count;
     }
     split :: (number: u64) -> u64, u64 {
-        text := sprint("%", number);
+        text := tprint("%", number);
 
         left  := string.{data = text.data, count = text.count / 2};
         right := string.{data = text.data + left.count, count = text.count - left.count};
 
         left_value  := string_to_int(left , 10, u64);
         right_value := string_to_int(right, 10, u64);
-
-        free(text);
 
         return left_value, right_value;
     }
@@ -127,7 +129,6 @@ simulate :: (input: string, count: int) -> result: u64 {
 
     result: u64;
     for count: stones { result += count; }
-    free(stones);
     return result;
 }
 
