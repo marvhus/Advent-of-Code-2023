@@ -35,16 +35,26 @@ part_1 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
+    a := seconds_since_init();
     result := simulate(contents, 25);
+    b := seconds_since_init();
+
     print("Result : %\n", result);
+    print("Total % ms\n", (b - a) * 1000);
+    print("---\n");
 }
 
 part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
+    a := seconds_since_init();
     result := simulate(contents, 75);
+    b := seconds_since_init();
+
     print("Result : %\n", result);
+    print("Total % ms\n", (b - a) * 1000);
+    print("---\n");
 }
 
 simulate :: (input: string, count: int) -> result: u64 {
@@ -79,9 +89,9 @@ simulate :: (input: string, count: int) -> result: u64 {
         count.* += 1;
     }
 
-    for 1..count {
-        new_stones := New(Table(u64, u64));
+    new_stones := New(Table(u64, u64));
 
+    for 1..count {
         for count, value: stones {
             if value == 0 {
                 a := find_or_add(new_stones, 1);
@@ -108,8 +118,10 @@ simulate :: (input: string, count: int) -> result: u64 {
         }
 
         { // Swap em, mash em, stick em in a stew...  (I wrote "Swap em" and I had to write the rest xD)
-            free(stones);
+            table_reset(stones);
+            tmp := stones;
             stones = new_stones;
+            new_stones = tmp;
         }
     }
 
