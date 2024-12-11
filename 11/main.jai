@@ -24,7 +24,7 @@ run :: (path : string, func : #type (string)->()) {
 main :: () {
     print("=== Part 1 ===\n");
     run("11/test.txt", part_1);
-    run("11/input.txt", part_1);
+    //run("11/input.txt", part_1);
 
     //print("=== Part 2 ===\n");
     //run("11/test.txt", part_2);
@@ -35,17 +35,8 @@ part_1 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    root := parse(contents,, temp);
-    for 0..24 { step(root,, temp); }
-
-    count: int;
-    current := root;
-    while current != null {
-        count += 1;
-        current = current.right;
-    }
-
-    print("Result : %\n", count);
+    result := simulate(contents, 25,, temp);
+    print("Result : %\n", result);
 
     reset_temporary_storage();
 }
@@ -54,100 +45,75 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Part 2.
+    result := simulate(contents, 75,, temp);
+    print("Result : %\n", result);
+
+    reset_temporary_storage();
 }
 
-print_nodes :: (root: *Node) {
-    current := root;
-    print("Nodes: ");
-    while current != null {
-        print("% ", current.value);
-        current = current.right;
+simulate :: (input: string, count: int) -> result: u64 {
+    // K: value, V: count.
+    stones := New(Table(u64, u64));
+    for stone: split(input, " ") {
+        value := string_to_int(stone, 10, u64);
+        count := find_or_add(stones, value);
+        count.* += 1;
     }
-    print("\n");
-}
 
-Node :: struct {
-    left, right: *Node;
-    value: u64;
-}
+    for 1..count {
+        new_stones := New(Table(u64, u64));
 
-create_node :: (value: u64, left: *Node = null, right: *Node = null) -> *Node {
-    node := New(Node);
-    assert(node != null);
+        for count, value: stones {
+            if value == 0 {
+                other_count := find_or_add(new_stones, 1);
+                other_count.* += count;
 
-    node.value = value;
-    node.left = left;
-    node.right = right;
+                continue;
+            }
 
-    return node;
-}
+            number_string := tprint("%", value);
+            if number_string.count % 2 == 0 {
+                left_half := string.{
+                    data = number_string.data,
+                    count = number_string.count / 2
+                };
+                right_half := string.{
+                    data = number_string.data + left_half.count,
+                    count = number_string.count - left_half.count
+                };
 
-parse :: (text: string) -> root: *Node {
-    root, current: *Node;
+                left_value := string_to_int(left_half, 10, u64);
+                right_value := string_to_int(right_half, 10, u64);
 
-    for stone: split(text, " ") {
-        number := string_to_int(stone, 10, u64);
+                left_count := find_or_add(new_stones, left_value);
+                right_count := find_or_add(new_stones, right_value);
 
-        if root == null {
-            root = create_node(number);
-            current = root;
-            continue;
+                left_count.* += count;
+                right_count.* += count;
+
+                continue;
+            }
+
+            new_count := find_or_add(new_stones, value * 2024);
+            new_count.* += count;
         }
 
-        node := create_node(number, current);
-        current.right = node;
-        current = node;
-    }
+        for count, value: new_stones { print("% (%), ", value, count); }
+        print("\n");
 
-    return root;
-}
-
-step :: (root: *Node) {
-    current := root;
-    while current != null {
-        defer current = current.right;
-
-        if current.value == 0 {
-            current.value = 1;
-            continue;
+        { // Swap em, mash em, stick em in a stew...  (I wrote "Swap em" and I had to write the rest xD)
+            free(stones);
+            stones = new_stones;
         }
-
-        digits := count_digits(current.value);
-        if digits % 2 == 0 {
-            // NOTE(mvh): This is a terrible way of doing this... but it works.
-            number_string := tprint("%", current.value);
-
-            left_half := string.{data = number_string.data, count = number_string.count / 2};
-            right_half := string.{data = number_string.data + left_half.count, count = number_string.count - left_half.count};
-
-            left_value := string_to_int(left_half, 10, u64);
-            right_value := string_to_int(right_half, 10, u64);
-
-            right_node := create_node(right_value, left = current, right = current.right);
-            current.right = right_node;
-
-            current.value = left_value;
-
-            current = right_node;
-            continue;
-        }
-
-        current.value *= 2024;
     }
+
+    result: u64;
+    for count: stones { result += count; }
+    return result;
 }
-
-count_digits :: (number: u64) -> count: int {
-    count: int = 1;
-    n := number;
-    while n >= 10 {
-        count += 1;
-        n /= 10;
-    }
-    return count;
-} 
 
 #import "File";
 #import "String";
 #import "Basic";
 #import "AoC_Utils";
+#import "Hash_Table";
