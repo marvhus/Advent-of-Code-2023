@@ -71,16 +71,15 @@ simulate :: (input: string, count: int) -> result: u64 {
         }
         return count;
     }
-    split :: (number: u64) -> u64, u64 {
-        text := tprint("%", number);
+    split :: (number: u64, digits: u64) -> u64, u64 {
+        half: u64 = digits / 2;
+        exp: u64 = 10;
+        for 1..half-1 { exp *= 10; }
 
-        left  := string.{data = text.data, count = text.count / 2};
-        right := string.{data = text.data + left.count, count = text.count - left.count};
+        left  := number / exp;
+        right := number % exp;
 
-        left_value  := string_to_int(left , 10, u64);
-        right_value := string_to_int(right, 10, u64);
-
-        return left_value, right_value;
+        return left, right;
     }
 
     // K: value, V: count.
@@ -104,7 +103,7 @@ simulate :: (input: string, count: int) -> result: u64 {
 
             digits := count_digits(value);
             if digits % 2 == 0 {
-                left, right := split(value);
+                left, right := split(value, digits);
 
                 a := find_or_add(new_stones, left);
                 a.* += count;
