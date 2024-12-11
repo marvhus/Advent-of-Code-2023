@@ -24,34 +24,53 @@ run :: (path : string, func : #type (string)->()) {
 main :: () {
     print("=== Part 1 ===\n");
     run("11/test.txt", part_1);
-    //run("11/input.txt", part_1);
+    run("11/input.txt", part_1);
 
-    //print("=== Part 2 ===\n");
-    //run("11/test.txt", part_2);
-    //run("11/input.txt", part_2);
+    print("=== Part 2 ===\n");
+    run("11/test.txt", part_2);
+    run("11/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    result := simulate(contents, 25,, temp);
+    result := simulate(contents, 25);
     print("Result : %\n", result);
-
-    reset_temporary_storage();
 }
 
 part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    result := simulate(contents, 75,, temp);
+    result := simulate(contents, 75);
     print("Result : %\n", result);
-
-    reset_temporary_storage();
 }
 
 simulate :: (input: string, count: int) -> result: u64 {
+    count_digits :: (number: u64) -> u64 {
+        count: u64 = 1;
+        n := number;
+        while n >= 10 {
+            n /= 10;
+            count += 1;
+        }
+        return count;
+    }
+    split :: (number: u64) -> u64, u64 {
+        text := sprint("%", number);
+
+        left  := string.{data = text.data, count = text.count / 2};
+        right := string.{data = text.data + left.count, count = text.count - left.count};
+
+        left_value  := string_to_int(left , 10, u64);
+        right_value := string_to_int(right, 10, u64);
+
+        free(text);
+
+        return left_value, right_value;
+    }
+
     // K: value, V: count.
     stones := New(Table(u64, u64));
     for stone: split(input, " ") {
@@ -65,41 +84,28 @@ simulate :: (input: string, count: int) -> result: u64 {
 
         for count, value: stones {
             if value == 0 {
-                other_count := find_or_add(new_stones, 1);
-                other_count.* += count;
+                a := find_or_add(new_stones, 1);
+                a.* += count;
 
                 continue;
             }
 
-            number_string := tprint("%", value);
-            if number_string.count % 2 == 0 {
-                left_half := string.{
-                    data = number_string.data,
-                    count = number_string.count / 2
-                };
-                right_half := string.{
-                    data = number_string.data + left_half.count,
-                    count = number_string.count - left_half.count
-                };
+            digits := count_digits(value);
+            if digits % 2 == 0 {
+                left, right := split(value);
 
-                left_value := string_to_int(left_half, 10, u64);
-                right_value := string_to_int(right_half, 10, u64);
+                a := find_or_add(new_stones, left);
+                a.* += count;
 
-                left_count := find_or_add(new_stones, left_value);
-                right_count := find_or_add(new_stones, right_value);
-
-                left_count.* += count;
-                right_count.* += count;
+                a = find_or_add(new_stones, right);
+                a.* += count;
 
                 continue;
             }
 
-            new_count := find_or_add(new_stones, value * 2024);
-            new_count.* += count;
+            a := find_or_add(new_stones, value * 2024);
+            a.* += count;
         }
-
-        for count, value: new_stones { print("% (%), ", value, count); }
-        print("\n");
 
         { // Swap em, mash em, stick em in a stew...  (I wrote "Swap em" and I had to write the rest xD)
             free(stones);
@@ -109,6 +115,7 @@ simulate :: (input: string, count: int) -> result: u64 {
 
     result: u64;
     for count: stones { result += count; }
+    free(stones);
     return result;
 }
 
