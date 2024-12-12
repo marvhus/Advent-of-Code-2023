@@ -22,13 +22,13 @@ run :: (path : string, func : #type (string)->()) {
 }
 
 main :: () {
-//    print("=== Part 1 ===\n");
-//    run("12/test.txt", part_1);
-//    run("12/input.txt", part_1);
+      print("=== Part 1 ===\n");
+      run("12/test.txt", part_1);
+      run("12/input.txt", part_1);
 
       print("=== Part 2 ===\n");
       run("12/test.txt", part_2);
-//    run("12/input.txt", part_2);
+      run("12/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
@@ -100,12 +100,54 @@ explore_map :: (map: Map, $is_part_2 := false) -> price: u64 {
 
         return cells[width * y + x];
     }
+    check_surounding :: (map: Map, region: u8, y: int, x: int, filled: [3 * 3]u8) -> u64 {
+        count: u64;
 
-    dfs :: (map: *Map, y: int, x: int, region: u8) -> (area: u64, perimeter: u64) {
+        matrix := NewArray(3 * 3, u8);
+        for filled { matrix[it_index] = it; }
+
+        matrix2 := NewArray(3 * 3, u8);
+
+        for 0..3 {
+            // Check against matrix.
+            success := true;
+            for dy: 0..2 {
+                for dx: 0..2 {
+                    expected_to_be_filled := matrix[3 * dy + dx];
+                    if expected_to_be_filled > 1 continue;
+                    expected := expected_to_be_filled == 1;
+
+                    cell := get_cell(map, y + dy - 1, x + dx - 1);
+                    success &&= (cell == region) == expected;
+                }
+            }
+            if success then count += 1;
+
+            // Rotate matrix.
+            matrix2[3 * 0 + 2] = matrix[3 * 0 + 0]; // left   top    -> right  top
+            matrix2[3 * 1 + 2] = matrix[3 * 0 + 1]; // top    middle -> right  middle
+            matrix2[3 * 2 + 2] = matrix[3 * 0 + 2]; // right  top    -> right  bottom
+            matrix2[3 * 2 + 1] = matrix[3 * 1 + 2]; // right  middle -> bottom middle
+            matrix2[3 * 2 + 0] = matrix[3 * 2 + 2]; // right  bottom -> left   bottom
+            matrix2[3 * 1 + 0] = matrix[3 * 2 + 1]; // bottom middle -> left   middle
+            matrix2[3 * 0 + 0] = matrix[3 * 2 + 0]; // left   bottom -> left   top
+            matrix2[3 * 0 + 1] = matrix[3 * 1 + 0]; // left   middle -> top    middle
+            matrix2[3 * 1 + 1] = matrix[3 * 1 + 1]; // middle        -> middle
+
+            tmp := matrix;
+            matrix = matrix2;
+            matrix2 = tmp;
+        }
+
+        return count;
+    }
+
+    dfs :: (map: *Map, y: int, x: int, region: u8) -> (area: u64, perimeter: u64, corners: u64) {
         map.visited[xx map.width * y + x] = true;
 
         area: u64 = 1;
         perimeter: u64;
+        corners: u64;
 
         for direction: Location.[
             .{x =  0, y = -1},
@@ -127,9 +169,10 @@ explore_map :: (map: Map, $is_part_2 := false) -> price: u64 {
             if cell == region {
                 if visited continue;
 
-                new_area, new_perimeter := dfs(map, new_y, new_x, region);
+                new_area, new_perimeter, new_corners := dfs(map, new_y, new_x, region);
                 area += new_area;
                 perimeter += new_perimeter;
+                corners += new_corners;
                 continue;
             }
 
@@ -138,7 +181,24 @@ explore_map :: (map: Map, $is_part_2 := false) -> price: u64 {
             if ! visited then array_add(*map.queued, Location.{new_x, new_y});
         }
 
-        return area, perimeter;
+        {
+            F :: 0;
+            T :: 1;
+            U :: 2;
+
+            corners += check_surounding(map, region, y, x, .[
+                F, T, U,
+                T, T, U,
+                U, U, U,
+            ]);
+            corners += check_surounding(map, region, y, x, .[
+                U, F, U,
+                F, T, U,
+                U, U, U,
+            ]);
+        }
+
+        return area, perimeter, corners;
     }
 
     array_add(*map.queued, Location.{0, 0});
@@ -154,74 +214,15 @@ explore_map :: (map: Map, $is_part_2 := false) -> price: u64 {
         if map.visited[array_index] == true continue;
 
         current_cell := map.cells[array_index];
-        area, perimeter := dfs(*map, current.y, current.x, current_cell);
+        area, perimeter, corners := dfs(*map, current.y, current.x, current_cell);
 
         #if is_part_2 {
-            edges: u64;
-
-            location := current;
-            direction := Location.{ x = 0, y = 1 };
-            while true {
-                defer {
-                    if location.x == current.x && location.y == current.y break;
-                }
-
-                next_x := location.x + direction.y;
-                next_y := location.y + direction.y;
-
-                if get_cell(map, next_y, next_x) == current_cell {
-                    location.x = next_x;
-                    location.y = next_y;
-                    continue;
-                }
-
-                edges += 1;
-
-                // Currently moving on the Y axis.
-                if direction.x == 0 {
-                    // Try to the right.
-                    if get_cell(map, location.y, location.x + 1) == current_cell {
-                        direction.y = 0;
-                        direction.x = +1;
-                        continue;
-                    }
-                    // Try to the left.
-                    if get_cell(map, location.y, location.x - 1) == current_cell {
-                        direction.y = 0;
-                        direction.x = -1;
-                        continue;
-                    }
-
-                    // It is one wide.  Just go backwards.
-                    direction.y = -direction.y;
-                    continue;
-                }
-
-                // Currently moving on the X axis.
-
-                // Try down.
-                if get_cell(map, location.y + 1, location.x) == current_cell {
-                    direction.y = +1;
-                    direction.x = 0;
-                    continue;
-                }
-                // Try up.
-                if get_cell(map, location.y - 1, location.x) == current_cell {
-                    direction.y = -1;
-                    direction.x = 0;
-                    continue;
-                }
-
-                // It is one tall. Just go backwards.
-                direction.x = -direction.x;
-                continue;
-            }
-
-            print("% : % * % = %\n", cast(string)u8.[current_cell], area, edges, area * edges);
-            price += area * edges;
+            total := area * corners;
+            //print("% : % * % = %\n", cast(string)u8.[current_cell], area, corners, total);
         } else {
-            price += area * perimeter;
+            total := area * perimeter;
         }
+        price += total;
     }
 
     return price;
