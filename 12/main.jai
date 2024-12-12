@@ -22,12 +22,12 @@ run :: (path : string, func : #type (string)->()) {
 }
 
 main :: () {
-    print("=== Part 1 ===\n");
-    run("12/test.txt", part_1);
-    run("12/input.txt", part_1);
+//    print("=== Part 1 ===\n");
+//    run("12/test.txt", part_1);
+//    run("12/input.txt", part_1);
 
-//    print("=== Part 2 ===\n");
-//    run("12/test.txt", part_2);
+      print("=== Part 2 ===\n");
+      run("12/test.txt", part_2);
 //    run("12/input.txt", part_2);
 }
 
@@ -47,7 +47,12 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Part 2.
+    map := parse(contents,, temp);
+    price := explore_map(map, is_part_2 = true,, temp);
+
+    print("Result : %\n", price);
+
+    reset_temporary_storage();
 }
 
 Location :: struct {
@@ -84,7 +89,7 @@ parse :: (text: string) -> Map {
     return map;
 }
 
-explore_map :: (map: Map) -> price: u64 {
+explore_map :: (map: Map, $is_part_2 := false) -> price: u64 {
     get_cell :: (using map: Map, y: int, x: int) -> u8 {
         if y < 0
         || y >= height
@@ -150,7 +155,73 @@ explore_map :: (map: Map) -> price: u64 {
 
         current_cell := map.cells[array_index];
         area, perimeter := dfs(*map, current.y, current.x, current_cell);
-        price += area * perimeter;
+
+        #if is_part_2 {
+            edges: u64;
+
+            location := current;
+            direction := Location.{ x = 0, y = 1 };
+            while true {
+                defer {
+                    if location.x == current.x && location.y == current.y break;
+                }
+
+                next_x := location.x + direction.y;
+                next_y := location.y + direction.y;
+
+                if get_cell(map, next_y, next_x) == current_cell {
+                    location.x = next_x;
+                    location.y = next_y;
+                    continue;
+                }
+
+                edges += 1;
+
+                // Currently moving on the Y axis.
+                if direction.x == 0 {
+                    // Try to the right.
+                    if get_cell(map, location.y, location.x + 1) == current_cell {
+                        direction.y = 0;
+                        direction.x = +1;
+                        continue;
+                    }
+                    // Try to the left.
+                    if get_cell(map, location.y, location.x - 1) == current_cell {
+                        direction.y = 0;
+                        direction.x = -1;
+                        continue;
+                    }
+
+                    // It is one wide.  Just go backwards.
+                    direction.y = -direction.y;
+                    continue;
+                }
+
+                // Currently moving on the X axis.
+
+                // Try down.
+                if get_cell(map, location.y + 1, location.x) == current_cell {
+                    direction.y = +1;
+                    direction.x = 0;
+                    continue;
+                }
+                // Try up.
+                if get_cell(map, location.y - 1, location.x) == current_cell {
+                    direction.y = -1;
+                    direction.x = 0;
+                    continue;
+                }
+
+                // It is one tall. Just go backwards.
+                direction.x = -direction.x;
+                continue;
+            }
+
+            print("% : % * % = %\n", cast(string)u8.[current_cell], area, edges, area * edges);
+            price += area * edges;
+        } else {
+            price += area * perimeter;
+        }
     }
 
     return price;
