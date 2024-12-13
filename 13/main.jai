@@ -26,21 +26,24 @@ main :: () {
     run("13/test.txt", part_1);
     run("13/input.txt", part_1);
 
-//    print("=== Part 2 ===\n");
-//    run("13/test.txt", part_2);
-//    run("13/input.txt", part_2);
+    print("=== Part 2 ===\n");
+    run("13/test.txt", part_2);
+    run("13/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    result: u64;
+    result: int;
 
     games := parse(contents);
     for game: games {
-        tokens, can_be_reached := find_minimum_tokens(game);
-        if can_be_reached then result += tokens;
+        a, b, success := minimum_button_presses(game);
+
+        if success {
+            result += (a * 3) + b;
+        }
     }
 
     print("Result : %\n", result);
@@ -50,7 +53,17 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Part 2.
+    result: int;
+
+    games := parse(contents, 10_000_000_000_000);
+    for game: games {
+        a, b, success := minimum_button_presses(game);
+        if success {
+            result += (a * 3) + b;
+        }
+    }
+
+    print("Result : %\n", result);
 }
 
 Location :: struct {
@@ -61,28 +74,14 @@ Game :: struct {
     goal: Location;
 }
 
-find_minimum_tokens :: (game: Game) -> (tokens: u64, can_be_reached: bool) {
-    tokens: u64 = 0xFFFFFFFFFFFFFFFF;
-    can_be_reached := false;
-
-    for a: 0..100 {
-        for b: 0..100 {
-            x := (game.delta_a.x * a) + (game.delta_b.x * b);
-            y := (game.delta_a.y * a) + (game.delta_b.y * b);
-            if x != game.goal.x || y != game.goal.y then continue;
-
-            price := cast(u64) ((a * 3) + b);
-            if price < tokens {
-                tokens = price;
-                can_be_reached = true;
-            }
-        }
-    }
-
-    return tokens, can_be_reached;
+minimum_button_presses :: (using game: Game) -> (a: int, b: int, success: bool) {
+    b := (goal.y * delta_a.x - goal.x * delta_a.y) / (delta_b.y * delta_a.x - delta_b.x * delta_a.y);
+    a := (goal.x - b * delta_b.x) / delta_a.x;
+    success := (delta_a.x * a) + (delta_b.x * b) == goal.x && (delta_a.y * a) + (delta_b.y * b) == goal.y;
+    return a, b, success;
 }
 
-parse :: (text: string) -> [..]Game {
+parse :: (text: string, extra_goal: int = 0) -> [..]Game {
     extract_coordinate :: (text: string, prefix: string) -> int {
         start := find_index_from_left(text, prefix) + prefix.count;
         assert(start > prefix.count);
@@ -117,8 +116,8 @@ parse :: (text: string) -> [..]Game {
         }
 
         if begins_with(line, PRIZE) {
-            current_game.goal.x = extract_coordinate(line, "X=");
-            current_game.goal.y = extract_coordinate(line, "Y=");
+            current_game.goal.x = extract_coordinate(line, "X=") + extra_goal;
+            current_game.goal.y = extract_coordinate(line, "Y=") + extra_goal;
 
             array_add(*games, current_game);
             current_game = Game.{};
@@ -129,6 +128,7 @@ parse :: (text: string) -> [..]Game {
     return games;
 }
 
+#import "Math";
 #import "File";
 #import "String";
 #import "Basic";
