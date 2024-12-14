@@ -18,8 +18,7 @@
 
 run :: (path : string, func : #type (string)->()) {
     print("Running with '%'\n", path);
-    func(path,, temp);
-    reset_temporary_storage();
+    func(path);
 }
 
 main :: () {
@@ -27,9 +26,9 @@ main :: () {
     run("14/test.txt", part_1);
     run("14/input.txt", part_1);
 
-//    print("=== Part 2 ===\n");
-//    run("14/test.txt", part_2);
-//    run("14/input.txt", part_2);
+    print("=== Part 2 ===\n");
+//    run("14/test.txt", part_2); // Part 2 doesn't have a test solution.
+    run("14/input.txt", part_2);
 }
 
 part_1 :: (path: string) {
@@ -37,10 +36,11 @@ part_1 :: (path: string) {
     assert(success);
 
     robots, top_left, bottom_right := parse(contents);
+    width  := bottom_right.x - top_left.x + 1;
+    height := bottom_right.y - top_left.y + 1;
 
-    simulate(robots, top_left, bottom_right, 100);
-
-    result := calculate_safety_factor(robots, top_left, bottom_right);
+    simulate(robots, width, height, 100);
+    result := calculate_safety_factor(robots, width, height);
 
     print("Result : %\n", result);
 }
@@ -49,7 +49,22 @@ part_2 :: (path: string) {
     contents, success := read_entire_file(path);
     assert(success);
 
-    // @TODO(martin): Implement Part 2.
+    robots, top_left, bottom_right := parse(contents);
+    width  := bottom_right.x - top_left.x + 1;
+    height := bottom_right.y - top_left.y + 1;
+    duration: u64;
+
+    while true {
+        defer duration += 1;
+        simulate(robots, width, height, 1);
+
+        str := to_string(robots, width, height);
+        defer free(str.data);
+
+        if contains(str, "##########") then break; // Check for a border.
+    }
+
+    print("Result : %\n", duration);
 }
 
 Vector2i :: struct {
@@ -59,16 +74,27 @@ Robot :: struct {
     position, velocity: Vector2i;
 }
 
-print_map :: (robots: []Robot, top_left: Vector2i, bottom_right: Vector2i) {
-    width  := bottom_right.x - top_left.x + 1;
-    height := bottom_right.y - top_left.y + 1;
+to_string :: (robots: []Robot, width: int, height: int) -> string {
+    str := string.{
+        data  = alloc(width * height),
+        count = width * height,
+    };
+    for *char: str { char.* = #char " "; }
 
+    for robot: robots {
+        str[width * robot.position.y + robot.position.x] = #char "#";
+    }
+
+    return str;
+}
+
+print_map :: (robots: []Robot, width: int, height: int, spacing := ".") {
     map := NewArray(width * height, u8);
     for *it: map { it.* = 0; }
 
     for robot: robots {
-        x := robot.position.x - top_left.x;
-        y := robot.position.y - top_left.y;
+        x := robot.position.x;
+        y := robot.position.y;
 
         map[width * y + x] += 1;
     }
@@ -76,18 +102,15 @@ print_map :: (robots: []Robot, top_left: Vector2i, bottom_right: Vector2i) {
     for y: 0..height-1 {
         for x: 0..width-1 {
             cell := map[width * y + x];
-            if cell == 0 then print(".");
+            if cell == 0 then print(spacing);
                          else print("%", cell);
         }
         print("\n");
     }
 }
 
-calculate_safety_factor :: (robots: []Robot, top_left: Vector2i, bottom_right: Vector2i) -> int {
+calculate_safety_factor :: (robots: []Robot, width: int, height: int) -> int {
     top_left_count, top_right_count, bottom_left_count, bottom_right_count: int;
-
-    width  := bottom_right.x - top_left.x;
-    height := bottom_right.y - top_left.y;
 
     middle_x := width  / 2;
     middle_y := height / 2;
@@ -98,8 +121,8 @@ calculate_safety_factor :: (robots: []Robot, top_left: Vector2i, bottom_right: V
     for robot: robots {
         // in case top left is not 0,0 but for example 1,1
 
-        x := robot.position.x - top_left.x;
-        y := robot.position.y - top_left.y;
+        x := robot.position.x;
+        y := robot.position.y;
 
         // Ignore robots in the middle.
         if x == middle_x continue;
@@ -117,13 +140,10 @@ calculate_safety_factor :: (robots: []Robot, top_left: Vector2i, bottom_right: V
     return top_left_count * top_right_count * bottom_left_count * bottom_right_count;
 }
 
-simulate :: (robots: []Robot, top_left: Vector2i, bottom_right: Vector2i, duration: int) {
-    width  := bottom_right.x - top_left.x + 1;
-    height := bottom_right.y - top_left.y + 1;
-
+simulate :: (robots: []Robot, width: int, height: int, duration: int) {
     for *robot: robots {
-        robot.position.x += robot.velocity.x * duration;
-        robot.position.y += robot.velocity.y * duration;
+        robot.position.x += robot.velocity.x * xx duration;
+        robot.position.y += robot.velocity.y * xx duration;
 
         while robot.position.x >= width { robot.position.x -= width; }
         while robot.position.x <  0     { robot.position.x += width; }
@@ -189,3 +209,4 @@ parse :: (text: string) -> ([..]Robot, top_left: Vector2i, bottom_right: Vector2
 #import "Basic";
 #import "String";
 #import "AoC_Utils";
+#import "Hash_Table";
